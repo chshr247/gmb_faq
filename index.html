@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GambitRP — помощь игрокам</title>
+<meta name="description" content="Заявки на возврат привилегии и по непришедшему донату GambitRP.">
+<meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="wrap">
+
+  <header class="head">
+    <h1>Помощь игрокам</h1>
+    <p class="sub">Выберите проблему и заполните форму. Ответ придёт вам в Discord.</p>
+  </header>
+
+  <div class="field picker">
+    <label class="label" for="problem">Ваша проблема</label>
+    <select id="problem">
+      <option value="">— Выберите проблему —</option>
+      <option value="privilege">Нужно вернуть привилегию</option>
+      <option value="donate">Не пришёл донат</option>
+    </select>
+  </div>
+
+  <!-- ── Привилегия ─────────────────────────────────────────────── -->
+  <section id="s-privilege" class="card" hidden>
+    <h2>Возврат привилегии</h2>
+
+    <div class="note note-ok">
+      <h3>Привилегию возвращаем в 3 случаях</h3>
+      <ol>
+        <li><b>После наборки.</b> Вы заняли пост наборного администратора, имея донатную привилегию. После снятия с наборки донатная админка подлежит восстановлению.</li>
+        <li><b>Автоснятие.</b> При спаме ULX-командами система считает, что вы можете сливать админку, и снимает привилегию. Если вы не сливали админку — она будет восстановлена.</li>
+        <li><b>Забыли снять варны с прошлой админки.</b> Варны перенеслись на новую привилегию и система сняла вас по лимиту (5 варнов). Если на текущей привилегии вы столько не получали — админка будет восстановлена.</li>
+      </ol>
+    </div>
+
+    <div class="note note-bad">
+      <h3>Привилегию НЕ возвращаем, если</h3>
+      <ul>
+        <li>это VIP — возвращаем только донатные админки от д-модера и выше;</li>
+        <li>привилегия утеряна более полугода назад (для наборной админки отсчёт идёт с момента снятия с наборки);</li>
+        <li>вас сняли с донатной админки, а вернуть вы пытаетесь более старую привилегию;</li>
+        <li>отсутствует лог покупок.</li>
+      </ul>
+      <p class="fine">Отказ возможен и по причине, не указанной выше. Если привилегия куплена давно, могут понадобиться дополнительные скриншоты с прокруткой вверх.</p>
+    </div>
+
+    <details>
+      <summary>Где взять SteamID?</summary>
+      <p>Находясь на сервере, откройте <b>TAB</b>, найдите там себя и нажмите «Скопировать SteamID».</p>
+    </details>
+
+    <details>
+      <summary>Где взять лог покупок?</summary>
+      <p>Нажмите <b>F4</b> → откройте <b>Донат</b> → справа сверху иконка профиля → <b>Все логи</b>. Сделайте скриншот с покупкой той привилегии, которую нужно вернуть.</p>
+      <p>Подойдёт и скриншот переписки с Артуром, если вы обновлялись или покупали не через F4.</p>
+    </details>
+
+    <label class="gate">
+      <input type="checkbox" id="gate-privilege">
+      <span>Я прочитал условия выше, моя ситуация подходит под один из трёх случаев, и у меня есть <b>полный, необрезанный</b> скриншот лога покупок.</span>
+    </label>
+
+    <form class="form" data-type="privilege" novalidate hidden>
+      <div class="field">
+        <label class="label" for="p-steam">Ваш SteamID</label>
+        <input id="p-steam" name="steam_id" type="text" inputmode="text" placeholder="STEAM_0:0:43836629" autocomplete="off">
+        <small class="err"></small>
+      </div>
+
+      <div class="field">
+        <label class="label" for="p-reason">Причина пропажи привилегии</label>
+        <select id="p-reason" name="reason">
+          <option value="">— Выберите причину —</option>
+        </select>
+        <small class="err"></small>
+      </div>
+
+      <div class="field">
+        <label class="label" for="p-shot">Скриншот лога покупок</label>
+        <p class="hint">Скриншот должен показывать <b>весь экран целиком, от угла до угла</b>. Обрезанные скриншоты и фотографии монитора не принимаются.</p>
+        <input id="p-shot" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp" data-min-width required>
+        <small class="err"></small>
+      </div>
+
+      <div class="field">
+        <label class="label" for="p-discord">Ваш Discord</label>
+        <input id="p-discord" name="discord" type="text" placeholder="cheshirecat247" autocomplete="off">
+        <small class="err"></small>
+      </div>
+
+      <div class="field">
+        <label class="label" for="p-comment">Комментарий <span class="opt">— необязательно</span></label>
+        <textarea id="p-comment" name="comment" rows="3" maxlength="500"></textarea>
+      </div>
+
+      <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="err form-err"></p>
+      <button type="submit">Отправить заявку</button>
+    </form>
+  </section>
+
+  <!-- ── Донат ──────────────────────────────────────────────────── -->
+  <section id="s-donate" class="card" hidden>
+    <h2>Не пришёл донат</h2>
+    <p class="sub">Заполните форму — платёж будет проверен вручную.</p>
+
+    <form class="form" data-type="donate" novalidate>
+      <div class="field">
+        <label class="label" for="d-method">Способ оплаты, который вы выбирали на сайте</label>
+        <select id="d-method" name="payment_method">
+          <option value="">— Выберите способ оплаты —</option>
+        </select>
+        <small class="err"></small>
+      </div>
+
+      <div class="note note-bad" id="external-support" hidden>
+        <h3>Эта проблема решается не администрацией сервера</h3>
+        <p>По выбранному способу оплаты вопрос решает поддержка платёжной системы. Обратитесь напрямую:</p>
+        <p><a id="external-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+      </div>
+
+      <div class="rest">
+        <div class="field">
+          <label class="label" for="d-steam">Ваш SteamID</label>
+          <input id="d-steam" name="steam_id" type="text" placeholder="STEAM_0:0:43836629" autocomplete="off">
+          <small class="err"></small>
+        </div>
+
+        <div class="field">
+          <label class="label" for="d-amount">Точная сумма кредитов</label>
+          <p class="hint">Именно кредитов, <b>без учёта комиссии</b>.</p>
+          <input id="d-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="300">
+          <small class="err"></small>
+        </div>
+
+        <div class="field">
+          <label class="label" for="d-paid">Дата и точное время платежа</label>
+          <input id="d-paid" name="paid_at" type="datetime-local">
+          <small class="err"></small>
+        </div>
+
+        <div class="field">
+          <label class="label" for="d-receipt">Скриншот чека или квитанции <span class="opt">— необязательно, но ускоряет проверку</span></label>
+          <input id="d-receipt" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp">
+          <small class="err"></small>
+        </div>
+
+        <div class="field">
+          <label class="label" for="d-discord">Ваш Discord</label>
+          <input id="d-discord" name="discord" type="text" placeholder="cheshirecat247" autocomplete="off">
+          <small class="err"></small>
+        </div>
+
+        <div class="field">
+          <label class="label" for="d-comment">Комментарий <span class="opt">— необязательно</span></label>
+          <textarea id="d-comment" name="comment" rows="3" maxlength="500"></textarea>
+        </div>
+
+        <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="err form-err"></p>
+        <button type="submit">Отправить заявку</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ── Готово ─────────────────────────────────────────────────── -->
+  <section id="s-done" class="card done" hidden>
+    <div class="check" aria-hidden="true">✓</div>
+    <h2>Заявка отправлена</h2>
+    <p id="done-text"></p>
+    <button type="button" id="again" class="ghost">Отправить ещё одну заявку</button>
+  </section>
+
+  <footer class="foot">GambitRP · вопросы вне списка — Discord <b>cheshirecat247</b></footer>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

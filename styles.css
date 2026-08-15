@@ -1,0 +1,263 @@
+:root {
+  --bg: #151130;
+  --surface: #1e1a45;
+  --surface-2: #262158;
+  --border: #332c6b;
+  --accent: #c8befa;
+  --accent-ink: #191339;
+  --text: #edeafb;
+  --muted: #9a93c4;
+  --err: #ff7a85;
+  --ok: #8de3b0;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 18px 64px;
+}
+
+.head { margin-bottom: 28px; }
+
+h1 {
+  margin: 0 0 6px;
+  font-size: clamp(26px, 6vw, 34px);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sub { margin: 0 0 18px; color: var(--muted); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  margin-top: 22px;
+}
+
+/* ── Поля ───────────────────────────────────────────── */
+
+.field { margin-bottom: 18px; }
+.picker { margin-bottom: 0; }
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.opt, .hint, .fine { color: var(--muted); font-weight: 400; }
+.hint, .fine { font-size: 13.5px; margin: -2px 0 8px; }
+.fine { margin: 10px 0 0; }
+
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  padding: 11px 13px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 16px; /* iOS не зумит при фокусе */
+}
+
+textarea { resize: vertical; }
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+                    linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+  background-position: calc(100% - 19px) center, calc(100% - 13px) center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+option { background: var(--surface-2); color: var(--text); }
+
+input[type="file"] { padding: 9px 12px; cursor: pointer; }
+
+input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 13px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover { border-color: var(--accent); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.invalid { border-color: var(--err) !important; }
+
+.err {
+  display: block;
+  margin-top: 6px;
+  color: var(--err);
+  font-size: 13.5px;
+  min-height: 0;
+}
+
+.err:empty { display: none; }
+.form-err { margin: 0 0 14px; }
+
+/* ── Заметки ────────────────────────────────────────── */
+
+.note {
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 10px;
+  padding: 15px 17px;
+  margin: 16px 0;
+  background: var(--surface-2);
+}
+
+.note-ok { border-left-color: var(--ok); }
+.note-ok h3 { color: var(--ok); }
+.note-bad { border-left-color: var(--err); }
+.note-bad h3 { color: var(--err); }
+
+.note ol, .note ul { margin: 0; padding-left: 20px; }
+.note li { margin-bottom: 8px; }
+.note li:last-child { margin-bottom: 0; }
+.note p { margin: 8px 0 0; }
+.note a { color: var(--accent); }
+
+details {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+details p { margin: 10px 0 0; }
+details p:first-of-type { margin-top: 12px; }
+
+/* ── Чекбокс-допуск ─────────────────────────────────── */
+
+.gate {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 20px 0 4px;
+  padding: 15px 17px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14.5px;
+}
+
+.gate input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.form { margin-top: 22px; }
+
+/* ── Кнопки ─────────────────────────────────────────── */
+
+button {
+  width: 100%;
+  padding: 13px 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: 0.55; cursor: default; }
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--border);
+}
+
+/* ── Готово ─────────────────────────────────────────── */
+
+.done { text-align: center; padding: 34px 22px; }
+
+.check {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: var(--accent-ink);
+  font-size: 30px;
+  line-height: 56px;
+  font-weight: 700;
+}
+
+.done p { color: var(--muted); margin: 0 0 22px; }
+
+.foot {
+  margin-top: 34px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* Honeypot: невидим для людей, доступен ботам. */
+.hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
