@@ -67,13 +67,12 @@ body {
   text-decoration: none;
 }
 
+/* Круг, кольцо и подложка вшиты в саму картинку - она же служит фавиконкой,
+   поэтому фон и рамка здесь не нужны. */
 .mark-badge {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: var(--accent);
-  object-fit: cover;
-  border: 1px solid var(--border);
+  object-fit: contain;
 }
 
 .mark-text {
@@ -264,7 +263,7 @@ h3 {
 
 input[type="text"],
 input[type="number"],
-input[type="datetime-local"],
+input[type="date"],
 input[type="file"],
 select,
 textarea {
@@ -297,6 +296,10 @@ select {
 option { background: var(--surface-2); color: var(--text); }
 
 input[type="file"] { padding: 9px 12px; cursor: pointer; }
+
+/* Без этого поле даты в WebKit сжимается по содержимому и стоит огрызком. */
+input[type="date"] { min-height: 46px; cursor: pointer; }
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.75); }
 
 input[type="file"]::file-selector-button {
   margin-right: 12px;

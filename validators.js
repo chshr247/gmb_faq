@@ -50,12 +50,14 @@ export const amount = (v) => {
   return Number.isInteger(n) && n > 0 && n <= 1_000_000;
 };
 
-// now передаётся явно, чтобы поведение не зависело от часов машины при проверке.
+// Дата в формате YYYY-MM-DD. now передаётся явно, чтобы поведение не зависело
+// от часов машины при проверке.
 export const paidAt = (v, now = Date.now()) => {
-  const t = Date.parse(v);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(v ?? ''))) return false;
+  const t = Date.parse(`${v}T00:00:00+03:00`); // дата означает московский день
   if (Number.isNaN(t)) return false;
   const YEAR = 365 * 24 * 3600 * 1000;
-  return t <= now + 24 * 3600 * 1000 && t > now - YEAR; // допускаем сутки на часовые пояса
+  return t <= now + 24 * 3600 * 1000 && t > now - YEAR; // сутки запаса на часовые пояса
 };
 
 export const imageFile = ({ type, size }) =>
@@ -73,7 +75,7 @@ export function validate(type, d, now = Date.now()) {
     if (!amount(d.amount)) e.amount = 'Целое число кредитов больше нуля';
     if (!paymentMethod(d.payment_method)) e.payment_method = 'Выберите способ оплаты';
     else if (!acceptsForm(d.payment_method)) e.payment_method = 'По этому способу оплаты обратитесь в поддержку платёжной системы';
-    if (!paidAt(d.paid_at, now)) e.paid_at = 'Укажите дату и время платежа';
+    if (!paidAt(d.paid_at, now)) e.paid_at = 'Укажите дату платежа';
   } else {
     e.type = 'Неизвестный тип заявки';
   }

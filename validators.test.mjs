@@ -11,7 +11,7 @@ const ok = (type, extra) =>
     reason: v.REASONS[0],
     amount: '300',
     payment_method: '#3 Карты РФ/СБП (от 300 руб)',
-    paid_at: '2026-08-15T21:40',
+    paid_at: '2026-08-15',
     ...extra,
   }, NOW);
 
@@ -40,10 +40,12 @@ test('сумма кредитов - целое положительное', () =
 });
 
 test('дата платежа: не из будущего и не старше года', () => {
-  assert.ok(v.paidAt('2026-08-15T21:40', NOW));
-  assert.ok(!v.paidAt('2027-01-01T00:00', NOW));
-  assert.ok(!v.paidAt('2024-01-01T00:00', NOW));
+  assert.ok(v.paidAt('2026-08-15', NOW));
+  assert.ok(v.paidAt('2026-08-16', NOW), 'сегодняшняя дата должна проходить');
+  assert.ok(!v.paidAt('2027-01-01', NOW));
+  assert.ok(!v.paidAt('2024-01-01', NOW));
   assert.ok(!v.paidAt('не дата', NOW));
+  assert.ok(!v.paidAt('2026-08-15T21:40', NOW), 'время больше не принимаем');
 });
 
 test('крипта и скины на форму не проходят - их ведёт поддержка платёжки', () => {

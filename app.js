@@ -31,6 +31,11 @@ copyButton.addEventListener('click', async () => {
   }
 });
 
+// ── Дата платежа: не позже сегодняшнего дня по Москве ─────────────────
+// en-CA даёт ровно тот формат ГГГГ-ММ-ДД, который ждёт input[type=date].
+$('#d-paid').max = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' })
+  .format(new Date());
+
 // ── Заполняем списки из общих правил, чтобы варианты не разъезжались ──
 const fill = (select, items) => {
   for (const item of items) select.add(new Option(item, item));

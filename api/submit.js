@@ -91,7 +91,7 @@ const caption = (row) => {
           `🟡 <b>НЕ ПРИШЁЛ ДОНАТ · #${row.id}</b>`,
           `Сумма: <b>${esc(row.amount)}</b> кредитов`,
           `Оплата: ${esc(row.payment_method)}`,
-          `Когда: ${new Date(row.paid_at).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })} МСК`,
+          `Дата: ${new Date(row.paid_at).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' })} (МСК)`,
         ];
 
   lines.push(
@@ -178,7 +178,9 @@ export default async function handler(request) {
       reason: type === 'privilege' ? data.reason : null,
       amount: type === 'donate' ? Number(data.amount) : null,
       payment_method: type === 'donate' ? data.payment_method : null,
-      paid_at: type === 'donate' ? new Date(data.paid_at).toISOString() : null,
+      // Дата приходит без времени и означает московский день - закрепляем это
+      // смещением, иначе UTC сдвинет её на сутки назад.
+      paid_at: type === 'donate' ? new Date(`${data.paid_at}T00:00:00+03:00`).toISOString() : null,
       comment: data.comment?.trim() || null,
       screenshot_url: hasFile ? await upload(file, type) : null,
       ip_hash: ipHash,

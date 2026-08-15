@@ -6,6 +6,8 @@
 <title>GambitRP - Помощь игрокам</title>
 <meta name="description" content="Заявки на возврат привилегии и по непришедшему донату GambitRP.">
 <meta name="color-scheme" content="dark">
+<link rel="icon" href="avatar.png" type="image/png" sizes="180x180">
+<link rel="apple-touch-icon" href="avatar.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;500;600;700;800&display=swap">
@@ -171,8 +173,9 @@
         </div>
 
         <div class="field">
-          <label class="label" for="d-paid">Дата и точное время платежа</label>
-          <input id="d-paid" name="paid_at" type="datetime-local">
+          <label class="label" for="d-paid">Дата платежа</label>
+          <p class="hint">По московскому времени.</p>
+          <input id="d-paid" name="paid_at" type="date">
           <small class="err"></small>
         </div>
 
