@@ -90,7 +90,7 @@ const fieldOf = (form, name) => $(`[name="${name}"]`, form).closest('.field');
 // ── Проверка картинки: тип и размер ───────────────────────────────────
 const checkImage = (input) => {
   const file = input.files[0];
-  if (!file) return input.required ? 'Прикрепите скриншот' : '';
+  if (!file) return input.required ? input.dataset.missing ?? 'Прикрепите скриншот' : '';
   return v.imageFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 5 МБ';
 };
 
@@ -135,10 +135,8 @@ for (const form of document.querySelectorAll('.form')) {
     const errors = v.validate(type, data);
 
     const shot = $('input[type="file"]', form);
-    if (type === 'privilege' || shot.files.length) {
-      const message = checkImage(shot);
-      if (message) errors.screenshot = message;
-    }
+    const shotError = checkImage(shot);
+    if (shotError) errors.screenshot = shotError;
 
     for (const field of form.querySelectorAll('.field')) setError(field, '');
     for (const [name, message] of Object.entries(errors)) setError(fieldOf(form, name), message);

@@ -146,7 +146,10 @@ export default async function handler(request) {
   const file = form.get('screenshot');
   const hasFile = file instanceof File && file.size > 0;
   if (hasFile && !v.imageFile(file)) errors.screenshot = 'Только JPG, PNG или WEBP до 5 МБ';
-  if (type === 'privilege' && !hasFile) errors.screenshot = 'Прикрепите скриншот лога покупок';
+  if (!hasFile) {
+    errors.screenshot =
+      type === 'privilege' ? 'Прикрепите скриншот лога покупок' : 'Прикрепите скриншот чека';
+  }
   // ponytail: ширину скриншота проверяет только браузер - декодировать картинку
   // на сервере ради этого не стоит. Обрезанный скрин всё равно виден глазами.
 

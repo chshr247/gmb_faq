@@ -177,8 +177,10 @@
         </div>
 
         <div class="field">
-          <label class="label" for="d-receipt">Скриншот чека или квитанции <span class="opt">- необязательно, но ускоряет проверку</span></label>
-          <input id="d-receipt" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp">
+          <label class="label" for="d-receipt">Скриншот чека или квитанции</label>
+          <p class="hint">Чек из банка или платёжной системы, где видны сумма и время платежа.</p>
+          <input id="d-receipt" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp"
+                 data-missing="Прикрепите скриншот чека" required>
           <small class="err"></small>
         </div>
 
