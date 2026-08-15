@@ -1,0 +1,1 @@
+A short web page for frequently asked gambitrp questions
