@@ -152,15 +152,22 @@ export default async function handler(request) {
 
   if (Object.keys(errors).length) return json({ errors }, 400);
 
-  const ipHash = await sha256((request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() + IP_SALT);
-  const hourAgo = new Date(Date.now() - 3600e3).toISOString();
-  const dayAgo = new Date(Date.now() - 86400e3).toISOString();
-
-  if ((await countSince(ipHash, hourAgo)) >= PER_HOUR || (await countSince(ipHash, dayAgo)) >= PER_DAY) {
-    return json({ error: 'Слишком много заявок. Попробуйте позже или напишите в Discord: cheshirecat247' }, 429);
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error('Не заданы переменные окружения — см. .env.example');
+    return json({ error: 'Приём заявок временно не работает. Напишите в Discord: cheshirecat247' }, 503);
   }
 
   try {
+    const ipHash = await sha256(
+      (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() + IP_SALT,
+    );
+    const hourAgo = new Date(Date.now() - 3600e3).toISOString();
+    const dayAgo = new Date(Date.now() - 86400e3).toISOString();
+
+    if ((await countSince(ipHash, hourAgo)) >= PER_HOUR || (await countSince(ipHash, dayAgo)) >= PER_DAY) {
+      return json({ error: 'Слишком много заявок. Попробуйте позже или напишите в Discord: cheshirecat247' }, 429);
+    }
+
     const row = await insert({
       type,
       steam_id: String(data.steam_id).trim().toUpperCase(),
@@ -174,8 +181,13 @@ export default async function handler(request) {
       ip_hash: ipHash,
     });
 
-    // Заявка уже сохранена. Если Telegram лёг — заявку не теряем, она в базе.
-    await notify(row, hasFile ? file : null).catch(() => {});
+    // Заявка уже сохранена, поэтому отказ Telegram не роняет ответ игроку.
+    // Но в лог он попасть обязан, иначе пропажу уведомлений нечем объяснить.
+    await notify(row, hasFile ? file : null)
+      .then(async (response) => {
+        if (!response.ok) console.error(`telegram ${response.status}: ${await response.text()}`);
+      })
+      .catch((error) => console.error('telegram', error));
 
     return json({ ok: true, id: row.id });
   } catch (error) {
