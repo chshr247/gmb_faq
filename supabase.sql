@@ -33,5 +33,5 @@ insert into storage.buckets (id, name, public)
 values ('screenshots', 'screenshots', false)
 on conflict (id) do nothing;
 
--- Политик на bucket тоже нет — файлы отдаются только по подписанной ссылке,
+-- Политик на bucket тоже нет - файлы отдаются только по подписанной ссылке,
 -- которую кладём в screenshot_url.

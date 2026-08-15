@@ -78,7 +78,7 @@ const insert = async (row) => {
 };
 
 const esc = (value) =>
-  String(value ?? '—').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  String(value ?? '-').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
 const caption = (row) => {
   const lines =
@@ -137,7 +137,7 @@ export default async function handler(request) {
   const data = Object.fromEntries(form);
   const type = data.type;
 
-  // Ботам отвечаем «ок» и ничего не сохраняем — пусть считают, что сработало.
+  // Ботам отвечаем «ок» и ничего не сохраняем - пусть считают, что сработало.
   if (data.website) return json({ ok: true });
   if (Number(data.elapsed) < v.MIN_FILL_SECONDS) return json({ ok: true });
 
@@ -147,13 +147,13 @@ export default async function handler(request) {
   const hasFile = file instanceof File && file.size > 0;
   if (hasFile && !v.imageFile(file)) errors.screenshot = 'Только JPG, PNG или WEBP до 5 МБ';
   if (type === 'privilege' && !hasFile) errors.screenshot = 'Прикрепите скриншот лога покупок';
-  // ponytail: ширину скриншота проверяет только браузер — декодировать картинку
+  // ponytail: ширину скриншота проверяет только браузер - декодировать картинку
   // на сервере ради этого не стоит. Обрезанный скрин всё равно виден глазами.
 
   if (Object.keys(errors).length) return json({ errors }, 400);
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.error('Не заданы переменные окружения — см. .env.example');
+    console.error('Не заданы переменные окружения - см. .env.example');
     return json({ error: 'Приём заявок временно не работает. Напишите в Discord: cheshirecat247' }, 503);
   }
 

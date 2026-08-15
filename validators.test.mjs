@@ -31,7 +31,7 @@ test('SteamID и Discord', () => {
   assert.ok(!v.discord('ник с пробелами'));
 });
 
-test('сумма кредитов — целое положительное', () => {
+test('сумма кредитов - целое положительное', () => {
   assert.ok(v.amount('300'));
   assert.ok(!v.amount('0'));
   assert.ok(!v.amount('-5'));
@@ -46,7 +46,7 @@ test('дата платежа: не из будущего и не старше �
   assert.ok(!v.paidAt('не дата', NOW));
 });
 
-test('крипта и скины на форму не проходят — их ведёт поддержка платёжки', () => {
+test('крипта и скины на форму не проходят - их ведёт поддержка платёжки', () => {
   assert.ok(!v.acceptsForm('Криптовалюты'));
   assert.ok(!v.acceptsForm('SteamPay (Скины)'));
   assert.ok(v.acceptsForm('ЮMoney'));

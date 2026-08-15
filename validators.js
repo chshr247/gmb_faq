@@ -1,4 +1,4 @@
-// Общие правила валидации. Используются и в браузере, и в serverless-функции —
+// Общие правила валидации. Используются и в браузере, и в serverless-функции -
 // чтобы правила не разъехались между фронтом и бэком.
 
 export const STEAM_ID = /^STEAM_0:[01]:\d{1,12}$/i;
@@ -6,8 +6,14 @@ export const DISCORD = /^@?[a-zA-Z0-9._]{2,32}(#\d{4})?$/;
 
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const MIN_SCREENSHOT_WIDTH = 1000;
 export const MIN_FILL_SECONDS = 3;
+
+// Автоматической проверки на обрезанный скриншот здесь нет намеренно.
+// Порог в пикселях отклонял мониторы 900px; сравнение с screen.width отклоняло
+// GMod в окне 1280x720 на 2K-мониторе; соотношение сторон не отличает обрезок
+// (747x471 - это почти ровно 16:10). Ложный отказ хуже пропуска: честный игрок
+// всё равно придёт в Discord, а ради этого всё и затевалось.
+// Вместо угадывания игроку показывается превью того, что он прикрепил.
 
 export const REASONS = [
   'После наборки',
@@ -55,7 +61,7 @@ export const paidAt = (v, now = Date.now()) => {
 export const imageFile = ({ type, size }) =>
   IMAGE_TYPES.includes(type) && size > 0 && size <= MAX_FILE_BYTES;
 
-// Проверяет заявку целиком. Возвращает объект ошибок: {} — заявка валидна.
+// Проверяет заявку целиком. Возвращает объект ошибок: {} - заявка валидна.
 export function validate(type, d, now = Date.now()) {
   const e = {};
   if (!steamId(d.steam_id)) e.steam_id = 'Формат: STEAM_0:0:43836629';

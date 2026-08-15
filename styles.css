@@ -10,36 +10,162 @@
   --err: #ff7a85;
   --ok: #8de3b0;
   --radius: 14px;
+  --measure: 680px;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
+
+/* Прокрутка к полю не должна прятать его под липкой панелью. */
+html { scroll-padding-top: 78px; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 16px/1.55 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-text-size-adjust: 100%;
 }
 
-.wrap {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 32px 18px 64px;
+/* ── Верхняя панель ─────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 9px max(18px, env(safe-area-inset-right)) 9px max(18px, env(safe-area-inset-left));
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 
-.head { margin-bottom: 28px; }
+/* Панель тянется во всю ширину, но её содержимое живёт на той же мере, что и
+   колонка со страницей - иначе кнопка уезжает за километр от контента. */
+.bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* Мера за вычетом боковых отступов колонки - тогда край кнопки совпадает
+     с краем карточки до пикселя. */
+  max-width: calc(var(--measure) - 36px);
+  margin: 0 auto;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .topbar {
+    background: color-mix(in srgb, var(--bg) 72%, transparent);
+    backdrop-filter: blur(14px);
+  }
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.mark-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.mark-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.mark-text b { font-size: 14px; font-weight: 700; }
+.mark-text small { color: var(--muted); font-size: 11.5px; }
+
+/* Мягкое свечение сверху: без него на широком экране страница выглядит
+   недоделанной - пустое поле вокруг узкой колонки. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(46rem 28rem at 82% 6%, rgba(200, 190, 250, 0.09), transparent 62%),
+    radial-gradient(38rem 26rem at 6% 92%, rgba(126, 104, 224, 0.1), transparent 62%),
+    radial-gradient(60rem 34rem at 50% -12rem, #2b2366, transparent 70%);
+  pointer-events: none;
+}
+
+/* Сетка даёт глазу опору на пустом фоне. Растворяется книзу, чтобы не
+   спорить с текстом форм. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(to right, rgba(200, 190, 250, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(200, 190, 250, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 62%);
+  mask-image: linear-gradient(to bottom, #000, transparent 62%);
+  pointer-events: none;
+}
+
+.wrap {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 40px 18px max(64px, env(safe-area-inset-bottom));
+  min-height: calc(100svh - 63px); /* высота липкой панели */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Как только открыта форма - контент идёт сверху, иначе длинную страницу
+   обрежет по краям центрирование. */
+.wrap:has(.card:not(.intro):not([hidden])) { justify-content: flex-start; }
+
+.head { margin-bottom: 24px; }
+
+/* Метка набрана моноширинным - это язык консоли, в которой живёт игрок.
+   Линия добирает строку до края меры и задаёт вертикаль всему макету. */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 14px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border), transparent);
+}
 
 h1 {
   margin: 0 0 6px;
   font-size: clamp(26px, 6vw, 34px);
+  font-weight: 800;
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 h2 {
   margin: 0 0 4px;
   font-size: 21px;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 h3 {
@@ -57,6 +183,67 @@ h3 {
   border-radius: var(--radius);
   padding: 22px 20px;
   margin-top: 22px;
+  animation: rise 0.22s ease-out;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+.card.intro { margin-top: 0; }
+
+/* Открылась форма - вводный блок больше не помогает, а мешает. */
+.wrap:has(.card:not(.intro):not([hidden])) .intro-only { display: none; }
+
+/* ── Как это работает ───────────────────────────────── */
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 16px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.step-num {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.sla {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between; /* по краям меры, как и всё остальное */
+  gap: 8px 22px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.sla b { color: var(--text); font-weight: 600; }
+
+@media (max-width: 560px) {
+  .steps { grid-template-columns: 1fr; }
 }
 
 /* ── Поля ───────────────────────────────────────────── */
@@ -92,6 +279,9 @@ textarea {
 }
 
 textarea { resize: vertical; }
+
+/* SteamID - строка из цифр и двоеточий, моноширинный набор читается точнее. */
+input[name="steam_id"] { font-family: var(--mono); letter-spacing: 0.01em; }
 
 select {
   appearance: none;
@@ -138,6 +328,29 @@ input[type="file"]::file-selector-button:hover { border-color: var(--accent); }
 }
 
 .err:empty { display: none; }
+
+.preview {
+  margin: 12px 0 0;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.preview img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #0e0b22;
+}
+
+.preview figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
 .form-err { margin: 0 0 14px; }
 
 /* ── Заметки ────────────────────────────────────────── */
@@ -173,6 +386,10 @@ summary {
   cursor: pointer;
   font-weight: 600;
   color: var(--accent);
+  /* Отрицательный margin компенсирует padding: строка выглядит как раньше,
+     но попасть по ней пальцем можно с запасом. */
+  padding: 10px 0;
+  margin: -10px 0;
 }
 
 details p { margin: 10px 0 0; }
@@ -251,6 +468,33 @@ button.ghost {
   text-align: center;
   color: var(--muted);
   font-size: 13.5px;
+}
+
+/* Ник копируется в один клик - набирать его руками в Discord неудобно. */
+.copy {
+  flex: none;
+  width: auto;
+  min-height: 40px; /* панель низкая, но палец попадает уверенно */
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--surface-2);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.copy:hover:not(:disabled) { filter: none; border-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Honeypot: невидим для людей, доступен ботам. */

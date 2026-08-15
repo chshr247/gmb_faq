@@ -15,6 +15,22 @@ const done = $('#s-done');
 
 let openedAt = Date.now();
 
+// Системная настройка «меньше движения» распространяется и на программную прокрутку.
+const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+
+// ── Ник в подвале копируется кликом ───────────────────────────────────
+const DISCORD = 'cheshirecat247';
+const copyButton = $('#copy-discord');
+copyButton.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(DISCORD);
+    copyButton.textContent = 'Ник скопирован';
+    setTimeout(() => { copyButton.textContent = 'Discord'; }, 1600);
+  } catch {
+    // Буфер недоступен (нет https или отказ в доступе) - ник продублирован в подвале.
+  }
+});
+
 // ── Заполняем списки из общих правил, чтобы варианты не разъезжались ──
 const fill = (select, items) => {
   for (const item of items) select.add(new Option(item, item));
@@ -35,7 +51,11 @@ $('#again').addEventListener('click', () => {
   $('#problem').value = '';
   done.hidden = true;
   for (const section of Object.values(sections)) section.hidden = true;
-  scrollTo({ top: 0, behavior: 'smooth' });
+  // Возвращаем допуск в исходное - иначе следующая заявка откроется с уже
+  // проставленной галочкой «условия прочитал».
+  $('#gate-privilege').checked = false;
+  $('.form', sections.privilege).hidden = true;
+  scrollTo({ top: 0, behavior });
 });
 
 // ── Допуск к форме возврата привилегии ────────────────────────────────
@@ -67,34 +87,37 @@ const setError = (field, message) => {
 
 const fieldOf = (form, name) => $(`[name="${name}"]`, form).closest('.field');
 
-// ── Проверка картинки: тип, размер и — для лога покупок — ширина ───────
-const checkImage = async (input) => {
+// ── Проверка картинки: тип и размер ───────────────────────────────────
+const checkImage = (input) => {
   const file = input.files[0];
   if (!file) return input.required ? 'Прикрепите скриншот' : '';
-  if (!v.imageFile(file)) return 'Только JPG, PNG или WEBP размером до 5 МБ';
-  if (!input.hasAttribute('data-min-width')) return '';
+  return v.imageFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 5 МБ';
+};
 
-  const url = URL.createObjectURL(file);
-  try {
-    const { width } = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth });
-      img.onerror = () => reject(new Error('broken'));
-      img.src = url;
-    });
-    return width < v.MIN_SCREENSHOT_WIDTH
-      ? 'Похоже, скриншот обрезан. Нужен снимок всего экрана целиком'
-      : '';
-  } catch {
-    return 'Не удалось прочитать файл — попробуйте другой скриншот';
-  } finally {
-    URL.revokeObjectURL(url);
+// Превью вместо автоматической проверки на обрезку: игрок видит, что именно
+// уходит, и сам ловит обрезанный кадр. Ни одного ложного отказа.
+const showPreview = (input, message) => {
+  const preview = $('.preview', input.closest('.field'));
+  if (!preview) return;
+
+  const img = $('img', preview);
+  URL.revokeObjectURL(img.src);
+
+  const file = input.files[0];
+  if (!file || message) {
+    img.removeAttribute('src');
+    preview.hidden = true;
+    return;
   }
+  img.src = URL.createObjectURL(file);
+  preview.hidden = false;
 };
 
 for (const input of document.querySelectorAll('input[type="file"]')) {
-  input.addEventListener('change', async () => {
-    setError(input.closest('.field'), await checkImage(input));
+  input.addEventListener('change', () => {
+    const message = checkImage(input);
+    setError(input.closest('.field'), message);
+    showPreview(input, message);
   });
 }
 
@@ -113,7 +136,7 @@ for (const form of document.querySelectorAll('.form')) {
 
     const shot = $('input[type="file"]', form);
     if (type === 'privilege' || shot.files.length) {
-      const message = await checkImage(shot);
+      const message = checkImage(shot);
       if (message) errors.screenshot = message;
     }
 
@@ -123,7 +146,7 @@ for (const form of document.querySelectorAll('.form')) {
     const first = $('.invalid', form);
     if (first) {
       first.focus();
-      first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      first.scrollIntoView({ block: 'center', behavior });
       return;
     }
 
@@ -147,7 +170,7 @@ for (const form of document.querySelectorAll('.form')) {
       sections[type].hidden = true;
       $('#done-text').textContent = DONE_TEXT[type];
       done.hidden = false;
-      scrollTo({ top: 0, behavior: 'smooth' });
+      scrollTo({ top: 0, behavior });
     } catch (error) {
       formError.textContent =
         error.message ||
