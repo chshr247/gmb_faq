@@ -92,6 +92,18 @@ const setError = (field, message) => {
 
 const fieldOf = (form, name) => $(`[name="${name}"]`, form).closest('.field');
 
+// Подсказка, а не ошибка: поле не подсвечивается, отправку не блокирует.
+const setNote = (field, message) => {
+  const slot = $('.warn', field);
+  if (slot) slot.textContent = message ?? '';
+};
+
+for (const input of document.querySelectorAll('input[name="steam_id"]')) {
+  input.addEventListener('input', () => {
+    setNote(input.closest('.field'), v.steamIdNote(input.value));
+  });
+}
+
 // ── Проверка картинки: тип и размер ───────────────────────────────────
 const checkImage = (input) => {
   const file = input.files[0];
@@ -145,6 +157,7 @@ for (const form of document.querySelectorAll('.form')) {
 
     for (const field of form.querySelectorAll('.field')) setError(field, '');
     for (const [name, message] of Object.entries(errors)) setError(fieldOf(form, name), message);
+    setNote(fieldOf(form, 'steam_id'), v.steamIdNote(data.steam_id));
 
     const first = $('.invalid', form);
     if (first) {

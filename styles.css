@@ -8,6 +8,7 @@
   --text: #edeafb;
   --muted: #9a93c4;
   --err: #ff7a85;
+  --warn: #f5c26b;
   --ok: #8de3b0;
   --radius: 14px;
   --measure: 680px;
@@ -331,6 +332,19 @@ input[type="file"]::file-selector-button:hover { border-color: var(--accent); }
 }
 
 .err:empty { display: none; }
+
+/* Предупреждение отличается от ошибки цветом и тем, что поле не краснеет. */
+.warn {
+  display: block;
+  margin-top: 6px;
+  padding-left: 11px;
+  border-left: 2px solid var(--warn);
+  color: var(--warn);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.warn:empty { display: none; }
 
 .preview {
   margin: 12px 0 0;

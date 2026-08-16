@@ -1,7 +1,10 @@
 // Общие правила валидации. Используются и в браузере, и в serverless-функции -
 // чтобы правила не разъехались между фронтом и бэком.
 
-export const STEAM_ID = /^STEAM_0:[01]:\d{1,12}$/i;
+// Форму принимаем с любой первой цифрой, а правильной считаем только STEAM_0 -
+// именно её показывает игра. STEAM_1 люди копируют со сторонних сайтов.
+export const STEAM_ID = /^STEAM_[0-9]:[01]:\d{1,12}$/i;
+export const STEAM_ID_CANON = /^STEAM_0:[01]:\d{1,12}$/i;
 export const DISCORD = /^@?[a-zA-Z0-9._]{2,32}(#\d{4})?$/;
 
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -40,6 +43,14 @@ export const EXTERNAL_SUPPORT = {
 };
 
 export const steamId = (v) => STEAM_ID.test(String(v ?? '').trim());
+
+// Не ошибка, а подсказка: заявку пропускаем, но говорим, что цифра не та.
+export const steamIdNote = (v) => {
+  const s = String(v ?? '').trim();
+  return STEAM_ID.test(s) && !STEAM_ID_CANON.test(s)
+    ? 'Все SteamID на сервере начинаются с STEAM_0. Проверьте первую цифру - похоже, ID скопирован со стороннего сайта и при разбане табличный бан снимается вручную, а обычный выдаётся заново после разбана, компенсируя табличку. Заполняйте дальше, заявку это не блокирует.'
+    : '';
+};
 export const discord = (v) => DISCORD.test(String(v ?? '').trim());
 export const reason = (v) => REASONS.includes(v);
 export const paymentMethod = (v) => PAYMENT_METHODS.includes(v);

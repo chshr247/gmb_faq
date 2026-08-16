@@ -22,13 +22,21 @@ test('корректные заявки проходят', () => {
 
 test('SteamID и Discord', () => {
   assert.ok(v.steamId('STEAM_0:1:5'));
-  assert.ok(!v.steamId('STEAM_1:0:5'));
   assert.ok(!v.steamId('7656119801234567'));
   assert.ok(!v.steamId(''));
   assert.ok(v.discord('@cheshirecat247'));
   assert.ok(v.discord('old.name#1234'));
   assert.ok(!v.discord('a'));
   assert.ok(!v.discord('ник с пробелами'));
+});
+
+test('STEAM_1 предупреждает, но не блокирует заявку', () => {
+  assert.ok(v.steamId('STEAM_1:0:43836629'), 'заявка должна проходить');
+  assert.deepEqual(ok('donate', { steam_id: 'STEAM_1:0:43836629' }), {}, 'ошибок быть не должно');
+  assert.match(v.steamIdNote('STEAM_1:0:43836629'), /STEAM_0/);
+
+  assert.equal(v.steamIdNote('STEAM_0:0:43836629'), '', 'правильный ID молчит');
+  assert.equal(v.steamIdNote('мусор'), '', 'на мусор отвечает ошибка формата, а не подсказка');
 });
 
 test('сумма кредитов - целое положительное', () => {

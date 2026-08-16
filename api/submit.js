@@ -95,7 +95,8 @@ const caption = (row) => {
         ];
 
   lines.push(
-    `SteamID: <code>${esc(row.steam_id)}</code>`,
+    `SteamID: <code>${esc(row.steam_id)}</code>` +
+      (v.STEAM_ID_CANON.test(row.steam_id) ? '' : ' ⚠ не STEAM_0, проверьте'),
     `Discord: <code>${esc(row.discord)}</code>`,
   );
   if (row.comment) lines.push(`Коммент: ${esc(row.comment)}`);
