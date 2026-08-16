@@ -8,8 +8,17 @@ export const STEAM_ID_CANON = /^STEAM_0:[01]:\d{1,12}$/i;
 export const DISCORD = /^@?[a-zA-Z0-9._]{2,32}(#\d{4})?$/;
 
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MIN_FILL_SECONDS = 3;
+
+// Сколько может весить файл, который реально уходит на сервер. Потолок задан не
+// нами: Vercel рвёт запрос тяжелее 4.5 МБ (FUNCTION_PAYLOAD_TOO_LARGE), причём
+// обрывом соединения - браузер показывает "Failed to fetch" вместо ошибки.
+// Берём с запасом на служебные поля multipart.
+export const MAX_FILE_BYTES = 4 * 1024 * 1024;
+
+// Сколько разрешаем выбрать в диалоге. Всё, что тяжелее MAX_FILE_BYTES, браузер
+// пережимает перед отправкой, поэтому исходник может быть крупным.
+export const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 
 // Автоматической проверки на обрезанный скриншот здесь нет намеренно.
 // Порог в пикселях отклонял мониторы 900px; сравнение с screen.width отклоняло
@@ -71,8 +80,13 @@ export const paidAt = (v, now = Date.now()) => {
   return t <= now + 24 * 3600 * 1000 && t > now - YEAR; // сутки запаса на часовые пояса
 };
 
+// Проверка того, что уходит на сервер (и того, что сервер принимает).
 export const imageFile = ({ type, size }) =>
   IMAGE_TYPES.includes(type) && size > 0 && size <= MAX_FILE_BYTES;
+
+// Проверка выбранного файла до сжатия.
+export const sourceFile = ({ type, size }) =>
+  IMAGE_TYPES.includes(type) && size > 0 && size <= MAX_SOURCE_BYTES;
 
 // Проверяет заявку целиком. Возвращает объект ошибок: {} - заявка валидна.
 export function validate(type, d, now = Date.now()) {

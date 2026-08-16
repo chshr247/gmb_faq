@@ -108,7 +108,27 @@ for (const input of document.querySelectorAll('input[name="steam_id"]')) {
 const checkImage = (input) => {
   const file = input.files[0];
   if (!file) return input.required ? input.dataset.missing ?? 'Прикрепите скриншот' : '';
-  return v.imageFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 5 МБ';
+  return v.sourceFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 20 МБ';
+};
+
+// Скриншоты в PNG легко весят больше, чем принимает сервер (4 МБ), поэтому
+// крупные пережимаем прямо в браузере. Мелкие не трогаем: PNG чётче для текста.
+const MAX_SIDE = 1920;
+
+const compress = async (file) => {
+  if (file.size <= v.MAX_FILE_BYTES) return file;
+
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+  if (!blob || blob.size >= file.size) return file;
+  return new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
 };
 
 // Превью вместо автоматической проверки на обрезку: игрок видит, что именно
@@ -173,6 +193,14 @@ for (const form of document.querySelectorAll('.form')) {
     button.disabled = true;
     button.textContent = 'Отправляем…';
     try {
+      if (shot.files[0]) {
+        const prepared = await compress(shot.files[0]);
+        if (!v.imageFile(prepared)) {
+          throw new Error('Скриншот слишком большой даже после сжатия. Сохраните его в JPG и попробуйте снова');
+        }
+        payload.set('screenshot', prepared, prepared.name);
+      }
+
       const response = await fetch('/api/submit', { method: 'POST', body: payload });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));

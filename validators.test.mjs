@@ -72,6 +72,8 @@ test('чужие значения в списках не принимаются'
 test('файлы: тип и размер', () => {
   assert.ok(v.imageFile({ type: 'image/png', size: 1000 }));
   assert.ok(!v.imageFile({ type: 'application/pdf', size: 1000 }));
-  assert.ok(!v.imageFile({ type: 'image/png', size: 9e6 }));
+  assert.ok(!v.imageFile({ type: 'image/png', size: 9e6 }), 'выше лимита Vercel в 4 МБ');
+  assert.ok(v.sourceFile({ type: 'image/png', size: 9e6 }), 'исходник крупнее - пережмётся');
+  assert.ok(!v.sourceFile({ type: 'image/png', size: 25e6 }));
   assert.ok(!v.imageFile({ type: 'image/png', size: 0 }));
 });
