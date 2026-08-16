@@ -225,3 +225,12 @@ for (const form of document.querySelectorAll('.form')) {
     }
   });
 }
+
+// ── Вспышка за курсором ───────────────────────────────────────────────
+// Рисует её .cursor-glow, отсюда только координаты. Тач-устройства мимо.
+if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  addEventListener('pointermove', (e) => {
+    document.documentElement.style.setProperty('--mx', `${e.clientX}px`);
+    document.documentElement.style.setProperty('--my', `${e.clientY}px`);
+  }, { passive: true });
+}

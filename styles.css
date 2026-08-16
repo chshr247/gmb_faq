@@ -12,6 +12,8 @@
   --ok: #8de3b0;
   --radius: 14px;
   --measure: 680px;
+  /* Цвет курсора: под mix-blend-mode: difference поверх --bg даёт --accent. */
+  --cursor-blend: #ddcfff;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
@@ -97,6 +99,71 @@ body::before {
     radial-gradient(38rem 26rem at 6% 92%, rgba(126, 104, 224, 0.1), transparent 62%),
     radial-gradient(60rem 34rem at 50% -12rem, #2b2366, transparent 70%);
   pointer-events: none;
+}
+
+/* Курсор: точка приклеена к мыши, кольцо догоняет по инерции. Оба раздуваются
+   над кликабельным - кольцо тоже, даже пока не долетело.
+   Координаты приезжают из app.js в --mx/--my. */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  border-radius: 50%;
+  translate: var(--mx, -50vw) var(--my, -50vh);
+  pointer-events: none;
+  /* difference инвертирует курсор попиксельно: на тёмном фоне он остаётся
+     светлым, на залитой акцентом кнопке темнеет - и ровно по краю кнопки,
+     половинками. Цвет ниже подобран так, чтобы поверх --bg дать точно
+     --accent (#ddcfff - #151130 = #c8befa). */
+  mix-blend-mode: difference;
+}
+
+.cursor-dot {
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  background: var(--cursor-blend);
+  scale: var(--cursor-scale, 1);
+  /* Задержки по позиции нет - точка и есть курсор. */
+  transition: scale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cursor-ring {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  /* Без opacity: она подмешивает подложку обратно и съедает инверсию. Гасим
+     кольцо самим цветом. */
+  border: 1px solid #a99ac9;
+  scale: var(--cursor-ring-scale, 1);
+  /* Долгий ease-out и есть инерция - отдельный цикл анимации не нужен. */
+  transition: translate 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+body:has(a:hover, button:hover, select:hover, input:hover, textarea:hover, label:hover, summary:hover) {
+  --cursor-scale: 1.8;
+  --cursor-ring-scale: 1.55;
+}
+
+/* Системный курсор прячем только там, где его заменяет наш. !important - потому
+   что кнопки, поля и ссылки ниже по файлу ставят себе cursor: pointer. */
+@media (hover: hover) and (pointer: fine) {
+  body, body * { cursor: none !important; }
+
+  /* Кнопка у input[type=file] живёт в теневом DOM - селектор `body *` туда
+     не достаёт. Два правила, а не список: неизвестный псевдоэлемент убил бы
+     всё правило целиком. */
+  input[type="file"]::-webkit-file-upload-button { cursor: none !important; }
+  input[type="file"]::file-selector-button { cursor: none !important; }
+}
+
+/* На тач-экранах курсора нет - «залипшие» кружки там ни к чему. */
+@media not all and (hover: hover) and (pointer: fine) {
+  .cursor-dot,
+  .cursor-ring { display: none; }
 }
 
 /* Сетка даёт глазу опору на пустом фоне. Растворяется книзу, чтобы не
