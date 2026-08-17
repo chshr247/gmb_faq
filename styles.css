@@ -143,7 +143,7 @@ body::before {
     scale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-body:has(a:hover, button:hover, select:hover, input:hover, textarea:hover, label:hover, summary:hover) {
+body:has(a:hover, button:hover, select:hover, input:hover, textarea:hover, label:hover, summary:hover, .menu-item:hover) {
   --cursor-scale: 1.8;
   --cursor-ring-scale: 1.55;
 }
@@ -361,7 +361,29 @@ select {
   cursor: pointer;
 }
 
+/* Виден только на тач-экранах: на мыши попап подменяет .menu (app.js). */
 option { background: var(--surface-2); color: var(--text); }
+
+.menu {
+  position: fixed;
+  z-index: 50;
+  max-height: 264px;
+  overflow-y: auto;
+  padding: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.menu-item {
+  padding: 9px 11px;
+  border-radius: 7px;
+  font-size: 15px;
+}
+
+.menu-item:hover { background: var(--bg); }
+.menu-item.on { color: var(--accent); font-weight: 600; }
 
 input[type="file"] { padding: 9px 12px; cursor: pointer; }
 

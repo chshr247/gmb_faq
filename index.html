@@ -117,8 +117,10 @@
       <div class="field">
         <label class="label" for="p-shot">Скриншот лога покупок</label>
         <p class="hint">Скриншот должен показывать <b>весь экран целиком, от угла до угла</b>. Обрезанные скриншоты и фотографии монитора не принимаются.</p>
-        <input id="p-shot" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp" required>
+        <input id="p-shot" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp"
+               data-fullscreen required>
         <small class="err"></small>
+        <small class="warn"></small>
         <figure class="preview" hidden>
           <img alt="Прикреплённый скриншот">
           <figcaption>Видно весь экран, от угла до угла? Обрезанный скриншот вернут на доработку.</figcaption>

@@ -150,11 +150,63 @@ const showPreview = (input, message) => {
   preview.hidden = false;
 };
 
+// ── Подсказка про обрезанный скриншот ─────────────────────────────────
+// Правила считает validators, отсюда только пиксели. 96px по ширине хватает:
+// мелкий шум усредняется, ровная заливка меню остаётся.
+const SAMPLE_WIDTH = 96;
+
+const CROP_NOTE = {
+  menu: 'Похоже, скриншот обрезан: меню занимает почти весь кадр, а игры вокруг него нет. '
+    + 'Нужен снимок всего экрана целиком - с худом и чатом, иначе заявку вернут на доработку.',
+  hud: 'Похоже, скриншот обрезан: в правом верхнем углу не видно надписи GambitRP. '
+    + 'Нужен снимок всего экрана целиком, от угла до угла, иначе заявку вернут на доработку.',
+};
+
+const measure = async (file) => {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  // Весь кадр уменьшенным - для доли, которую занимает меню.
+  const width = SAMPLE_WIDTH;
+  const height = Math.max(1, Math.round(width * bitmap.height / bitmap.width));
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  const share = v.menuShare(ctx.getImageData(0, 0, width, height));
+
+  // Правый верхний угол - в исходном масштабе, иначе тонкий текст вотермарки
+  // размажется по фону.
+  const [cw, ch] = v.CROP.corner.map((part, i) =>
+    Math.max(1, Math.round((i ? bitmap.height : bitmap.width) * part)));
+  canvas.width = cw;
+  canvas.height = ch;
+  ctx.drawImage(bitmap, bitmap.width - cw, 0, cw, ch, 0, 0, cw, ch);
+  const watermark = v.watermarkPixels(ctx.getImageData(0, 0, cw, ch));
+
+  bitmap.close();
+  return { share, watermark };
+};
+
 for (const input of document.querySelectorAll('input[type="file"]')) {
-  input.addEventListener('change', () => {
+  input.addEventListener('change', async () => {
+    const field = input.closest('.field');
     const message = checkImage(input);
-    setError(input.closest('.field'), message);
+    setError(field, message);
     showPreview(input, message);
+    setNote(field, '');
+
+    // Чек из банка - законно обрезанный скриншот, его не проверяем.
+    const file = input.files[0];
+    if (message || !file || !('fullscreen' in input.dataset)) return;
+    try {
+      const stats = await measure(file);
+      console.debug('screenshot', file.name, stats); // пороги крутятся в validators.js CROP
+      // Пока считали, игрок мог выбрать другой файл.
+      if (input.files[0] === file) setNote(field, CROP_NOTE[v.cropReason(stats)] ?? '');
+    } catch {
+      // Битый или экзотический файл: это подсказка, а не проверка - молчим.
+    }
   });
 }
 
@@ -233,4 +285,106 @@ if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
     document.documentElement.style.setProperty('--mx', `${e.clientX}px`);
     document.documentElement.style.setProperty('--my', `${e.clientY}px`);
   }, { passive: true });
+}
+
+// ── Свой список вместо нативного попапа ───────────────────────────────
+// Попап <select> рисует ОС - наш курсор туда не долетает и подменяется
+// системной стрелкой. Подменяем только попап: сам <select> остаётся на месте,
+// значение, валидацию, ошибки и клавиатуру по-прежнему ведёт он.
+// На тач-экранах курсора нет, а системный барабан удобнее - там не трогаем.
+if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  menu.hidden = true;
+  menu.setAttribute('aria-hidden', 'true'); // озвучивает по-прежнему сам select
+  document.body.append(menu);
+
+  let owner = null;
+  let items = [];
+  let active = -1; // подсвеченный пункт: с клавиатуры он же и выбирается
+
+  const close = () => { menu.hidden = true; owner = null; items = []; };
+
+  const highlight = (index) => {
+    items[active]?.classList.remove('on');
+    active = index;
+    items[active]?.classList.add('on');
+    items[active]?.scrollIntoView({ block: 'nearest' });
+  };
+
+  const pick = (index) => {
+    const select = owner;
+    close();
+    if (!select || index < 0 || select.selectedIndex === index) return;
+    select.selectedIndex = index;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const open = (select) => {
+    owner = select;
+    active = -1;
+    items = [...select.options].map((option, index) => {
+      const item = document.createElement('div');
+      item.className = 'menu-item';
+      item.textContent = option.text;
+      item.addEventListener('click', () => pick(index));
+      return item;
+    });
+    menu.replaceChildren(...items);
+
+    const box = select.getBoundingClientRect();
+    menu.style.left = `${box.left}px`;
+    menu.style.width = `${box.width}px`;
+    menu.style.top = '0';
+    menu.hidden = false;
+
+    // Высоту знаем только после показа - и лишь тогда видно, влезает ли список
+    // под полем или его надо откинуть вверх.
+    const below = box.bottom + 6;
+    menu.style.top = below + menu.offsetHeight <= innerHeight
+      ? `${below}px`
+      : `${Math.max(6, box.top - 6 - menu.offsetHeight)}px`;
+
+    highlight(select.selectedIndex);
+  };
+
+  addEventListener('mousedown', (e) => {
+    if (menu.contains(e.target)) return; // выбор доедет своим click
+    const select = e.target.closest('select');
+    const previous = owner;
+    close();
+    if (!select) return;
+    e.preventDefault(); // нативный попап не открывается
+    select.focus();
+    if (select !== previous) open(select); // повторный клик по полю закрывает
+  });
+
+  // Space и F4 (в Windows) тоже зовут нативный попап - перехватываем и их,
+  // иначе список открывался бы то наш, то системный.
+  const OPENS = new Set([' ', 'F4', 'Enter']);
+
+  addEventListener('keydown', (e) => {
+    if (!owner) {
+      const select = e.target.closest?.('select');
+      if (!select || !(OPENS.has(e.key) || (e.altKey && e.key.startsWith('Arrow')))) return;
+      e.preventDefault();
+      open(select);
+      return;
+    }
+
+    switch (e.key) {
+      case 'Escape': case 'Tab': close(); return; // Tab уводит с поля как обычно
+      case 'Enter': case ' ': pick(active); break;
+      case 'ArrowDown': highlight(Math.min(active + 1, items.length - 1)); break;
+      case 'ArrowUp': highlight(Math.max(active - 1, 0)); break;
+      case 'Home': highlight(0); break;
+      case 'End': highlight(items.length - 1); break;
+      default: return;
+    }
+    e.preventDefault();
+  });
+
+  // Прокрутку внутри самого меню закрытием считать нельзя - это листание списка.
+  addEventListener('scroll', (e) => { if (!menu.contains(e.target)) close(); }, true);
+  addEventListener('resize', close);
 }

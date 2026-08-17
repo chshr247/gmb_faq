@@ -69,6 +69,67 @@ test('чужие значения в списках не принимаются'
   assert.ok(v.validate('что-то', {}, NOW).type);
 });
 
+// Кадр 96xN в RGBA: pixel(x, y) возвращает [r, g, b].
+const frame = (width, height, pixel) => {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const [r, g, b] = pixel(x, y);
+      data.set([r, g, b, 255], (y * width + x) * 4);
+    }
+  }
+  return { data, width, height };
+};
+
+// Сцена: текстура и градиент, ровных заливок нет.
+const scene = (x, y) => [(x * 7 + y * 13) % 256, 40 + (x * 31) % 200, (y * 17) % 256];
+
+// Меню: шапка #2a2a2a, тело #1c1c1c, строки списка #232323.
+const menu = (x, y) => (y < 6 ? [42, 42, 42] : (y % 7 ? [28, 28, 28] : [35, 35, 35]));
+
+// Кадр, где меню занимает долю share по каждой стороне, а вокруг - сцена.
+const shot = (share) => frame(96, 54, (x, y) => {
+  const mx = Math.round(96 * (1 - share) / 2);
+  const my = Math.round(54 * (1 - share) / 2);
+  const inside = x >= mx && x < 96 - mx && y >= my && y < 54 - my;
+  return inside ? menu(x - mx, y - my) : scene(x, y);
+});
+
+test('меню на весь кадр - обрезок', () => {
+  const big = v.CROP.shareMax;
+  assert.ok(v.menuShare(shot(1)) >= big, 'панель встык');
+  assert.ok(v.menuShare(shot(0.9)) >= big, 'панель с ободком сцены - тоже обрезок');
+  assert.ok(v.menuShare(shot(0.55)) < big, 'весь экран, меню по центру');
+
+  // Ночная сцена без меню: тёмная и серая, но это градиент, а не заливка.
+  const night = frame(96, 54, (x, y) => {
+    const l = 20 + ((x * 3 + y * 5) % 60);
+    return [l, l, l];
+  });
+  assert.ok(v.menuShare(night) < big, 'ложный отказ хуже пропуска');
+});
+
+test('вотермарка GambitRP: и жёлтая, и зелёная, но не кнопки меню', () => {
+  assert.ok(v.isWatermark(124, 252, 0), 'зелёная фаза');
+  assert.ok(v.isWatermark(255, 242, 0), 'жёлтая фаза');
+
+  assert.ok(!v.isWatermark(245, 184, 32), 'жёлтая кнопка меню #f5b820');
+  assert.ok(!v.isWatermark(201, 162, 60), 'золотая кнопка меню');
+  assert.ok(!v.isWatermark(107, 142, 78), 'трава');
+  assert.ok(!v.isWatermark(255, 255, 255), 'белый текст');
+  assert.ok(!v.isWatermark(160, 200, 230), 'небо');
+
+  // Угол кадра: строка текста вотермарки на тёмной подложке.
+  const corner = frame(60, 16, (x, y) => (y === 8 && x < 40 ? [124, 252, 0] : [43, 43, 43]));
+  assert.ok(v.watermarkPixels(corner) >= v.CROP.watermarkMin);
+});
+
+test('причина, по которой скриншот не похож на полный экран', () => {
+  assert.equal(v.cropReason({ share: 0.2, watermark: 400 }), '', 'полный экран');
+  assert.equal(v.cropReason({ share: 0.9, watermark: 0 }), 'menu', 'панель встык');
+  assert.equal(v.cropReason({ share: 0.2, watermark: 0 }), 'hud', 'обрезали угол с вотермаркой');
+});
+
 test('файлы: тип и размер', () => {
   assert.ok(v.imageFile({ type: 'image/png', size: 1000 }));
   assert.ok(!v.imageFile({ type: 'application/pdf', size: 1000 }));
