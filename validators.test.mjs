@@ -12,6 +12,7 @@ const ok = (type, extra) =>
     amount: '300',
     payment_method: '#3 Карты РФ/СБП (от 300 руб)',
     paid_at: '2026-08-15',
+    server: v.SERVERS[0],
     ...extra,
   }, NOW);
 
@@ -137,4 +138,14 @@ test('файлы: тип и размер', () => {
   assert.ok(v.sourceFile({ type: 'image/png', size: 9e6 }), 'исходник крупнее - пережмётся');
   assert.ok(!v.sourceFile({ type: 'image/png', size: 25e6 }));
   assert.ok(!v.imageFile({ type: 'image/png', size: 0 }));
+});
+
+test('номер сервера обязателен, как и SteamID', () => {
+  assert.ok(v.server(v.SERVERS[0]));
+  assert.ok(!v.server(''), 'не выбрал - ошибка');
+  assert.ok(!v.server(undefined));
+  assert.ok(!v.server('3 сервер'), 'чужое значение не принимаем');
+
+  assert.deepEqual(ok('privilege', { server: v.SERVERS[1] }), {});
+  assert.ok(ok('donate', { server: '' }).server, 'без сервера заявка не проходит');
 });

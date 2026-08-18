@@ -97,6 +97,11 @@ export const cropReason = ({ share, watermark }) =>
     : watermark < CROP.watermarkMin ? 'hud'
       : '';
 
+export const SERVERS = [
+  '1 сервер (rp_bangclaw)',
+  '2 сервер (rp_downtown_tits_v2)',
+];
+
 export const REASONS = [
   'После наборки',
   'Автоснятие за спам ULX-командами',
@@ -132,6 +137,7 @@ export const steamIdNote = (v) => {
 };
 export const discord = (v) => DISCORD.test(String(v ?? '').trim());
 export const reason = (v) => REASONS.includes(v);
+export const server = (v) => SERVERS.includes(v);
 export const paymentMethod = (v) => PAYMENT_METHODS.includes(v);
 export const acceptsForm = (method) => !(method in EXTERNAL_SUPPORT);
 
@@ -163,6 +169,7 @@ export function validate(type, d, now = Date.now()) {
   const e = {};
   if (!steamId(d.steam_id)) e.steam_id = 'Формат: STEAM_0:0:43836629';
   if (!discord(d.discord)) e.discord = 'Укажите ваш Discord (например: cheshirecat247)';
+  if (!server(d.server)) e.server = 'Выберите сервер из списка';
 
   if (type === 'privilege') {
     if (!reason(d.reason)) e.reason = 'Выберите причину';

@@ -40,6 +40,7 @@ $('#d-paid').max = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' 
 const fill = (select, items) => {
   for (const item of items) select.add(new Option(item, item));
 };
+for (const select of document.querySelectorAll('select[name="server"]')) fill(select, v.SERVERS);
 fill($('#p-reason'), v.REASONS);
 fill($('#d-method'), v.PAYMENT_METHODS);
 

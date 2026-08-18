@@ -99,6 +99,7 @@ const caption = (row) => {
       (v.STEAM_ID_CANON.test(row.steam_id) ? '' : ' ⚠ не STEAM_0, проверьте'),
     `Discord: <code>${esc(row.discord)}</code>`,
   );
+  if (row.server) lines.push(`Сервер: ${esc(row.server)}`);
   if (row.comment) lines.push(`Коммент: ${esc(row.comment)}`);
   if (row.screenshot_url) lines.push(`<a href="${row.screenshot_url}">Скриншот</a>`);
   return lines.join('\n');
@@ -176,6 +177,7 @@ export default async function handler(request) {
       type,
       steam_id: String(data.steam_id).trim().toUpperCase(),
       discord: String(data.discord).trim().replace(/^@/, ''),
+      server: data.server,
       reason: type === 'privilege' ? data.reason : null,
       amount: type === 'donate' ? Number(data.amount) : null,
       payment_method: type === 'donate' ? data.payment_method : null,
