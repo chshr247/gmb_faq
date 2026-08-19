@@ -112,7 +112,7 @@ const checkImage = (input) => {
   return v.sourceFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 20 МБ';
 };
 
-// Скриншоты в PNG легко весят больше, чем принимает сервер (4 МБ), поэтому
+// Скриншоты в PNG легко весят больше, чем принимает сервер (3 МБ), поэтому
 // крупные пережимаем прямо в браузере. Мелкие не трогаем: PNG чётче для текста.
 const MAX_SIDE = 1920;
 
@@ -269,9 +269,17 @@ for (const form of document.querySelectorAll('.form')) {
       done.hidden = false;
       scrollTo({ top: 0, behavior });
     } catch (error) {
+      // fetch падает TypeError'ом, когда ответа не было вообще: обрыв связи или
+      // тело больше лимита Vercel. Логов на сервере в этом случае нет, поэтому
+      // причину показываем игроку - размер вложения он назовёт в Discord.
+      console.error('submit', error);
+      const bytes = payload.get('screenshot')?.size ?? 0;
       formError.textContent =
-        error.message ||
-        'Не удалось отправить заявку. Попробуйте ещё раз или напишите в Discord: cheshirecat247';
+        error instanceof TypeError
+          ? `Заявка не ушла: связь с сервером оборвалась (вложение ${(bytes / 1e6).toFixed(1)} МБ). `
+            + 'Проверьте интернет и попробуйте ещё раз или напишите в Discord: cheshirecat247'
+          : error.message ||
+            'Не удалось отправить заявку. Попробуйте ещё раз или напишите в Discord: cheshirecat247';
     } finally {
       button.disabled = false;
       button.textContent = 'Отправить заявку';
