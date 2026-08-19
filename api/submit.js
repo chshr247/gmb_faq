@@ -101,7 +101,6 @@ const caption = (row) => {
   );
   if (row.server) lines.push(`Сервер: ${esc(row.server)}`);
   if (row.comment) lines.push(`Коммент: ${esc(row.comment)}`);
-  if (row.screenshot_url) lines.push(`<a href="${row.screenshot_url}">Скриншот</a>`);
   return lines.join('\n');
 };
 
