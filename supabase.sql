@@ -17,11 +17,13 @@ create table if not exists public.requests (
   screenshot_url text,
   comment        text,
   admin_note     text,          -- твои пометки, игрок их не видит
-  ip_hash        text           -- sha256(ip + соль); сам IP не храним
+  ip_hash        text,          -- sha256(ip + соль); для склейки заявок одного человека
+  ip             text           -- сырой IP заявки, виден только через service_role
 );
 
--- Если таблица уже создана раньше - добавить колонку сервера:
+-- Если таблица уже создана раньше - добавить недостающие колонки:
 alter table public.requests add column if not exists server text;
+alter table public.requests add column if not exists ip     text;
 
 create index if not exists requests_created_idx on public.requests (created_at desc);
 create index if not exists requests_status_idx  on public.requests (status);

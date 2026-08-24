@@ -162,9 +162,8 @@ export default async function handler(request) {
   }
 
   try {
-    const ipHash = await sha256(
-      (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() + IP_SALT,
-    );
+    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
+    const ipHash = await sha256(ip + IP_SALT);
     const hourAgo = new Date(Date.now() - 3600e3).toISOString();
     const dayAgo = new Date(Date.now() - 86400e3).toISOString();
 
@@ -186,6 +185,7 @@ export default async function handler(request) {
       comment: data.comment?.trim() || null,
       screenshot_url: hasFile ? await upload(file, type) : null,
       ip_hash: ipHash,
+      ip,
     });
 
     // Заявка уже сохранена, поэтому отказ Telegram не роняет ответ игроку.
