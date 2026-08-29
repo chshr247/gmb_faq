@@ -4,8 +4,14 @@
     {
       "name": "static",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "serve", "-l", "4173", "."],
-      "port": 4173
+      "runtimeArgs": [
+        "-y",
+        "serve",
+        "-l",
+        "4174",
+        "."
+      ],
+      "port": 4174
     }
   ]
 }
