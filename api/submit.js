@@ -131,7 +131,7 @@ const notify = async (row, file) => {
   });
 };
 
-export default async function handler(request) {
+export default async function handler(request, context) {
   if (request.method !== 'POST') return json({ error: 'method' }, 405);
 
   const form = await request.formData();
@@ -190,11 +190,15 @@ export default async function handler(request) {
 
     // Заявка уже сохранена, поэтому отказ Telegram не роняет ответ игроку.
     // Но в лог он попасть обязан, иначе пропажу уведомлений нечем объяснить.
-    await notify(row, hasFile ? file : null)
+    // Ответ игроку не ждёт Telegram: это вторая заливка того же скриншота, и
+    // вместе с заливкой в Supabase она упиралась в лимит времени Edge-функции -
+    // игрок видел «связь оборвалась» при уже сохранённой заявке.
+    const sent = notify(row, hasFile ? file : null)
       .then(async (response) => {
         if (!response.ok) console.error(`telegram ${response.status}: ${await response.text()}`);
       })
       .catch((error) => console.error('telegram', error));
+    context?.waitUntil?.(sent);
 
     return json({ ok: true, id: row.id });
   } catch (error) {
