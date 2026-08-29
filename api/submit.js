@@ -151,7 +151,7 @@ export default async function handler(request, context) {
     errors.screenshot =
       type === 'privilege' ? 'Прикрепите скриншот лога покупок' : 'Прикрепите скриншот чека';
   }
-  // ponytail: ширину скриншота проверяет только браузер - декодировать картинку
+  // NOTE: ширину скриншота проверяет только браузер - декодировать картинку
   // на сервере ради этого не стоит. Обрезанный скрин всё равно виден глазами.
 
   if (Object.keys(errors).length) return json({ errors }, 400);
