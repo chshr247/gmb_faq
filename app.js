@@ -136,13 +136,16 @@ const checkFile = (input) => {
   return v.sourceFile(file, kind) ? '' : v.fileError(kind);
 };
 
-// Скриншоты в PNG легко весят больше, чем принимает сервер (3 МБ), поэтому
-// крупные пережимаем прямо в браузере. Мелкие не трогаем: PNG чётче для текста.
+// Пережимаем любой скриншот, а не только тяжелее 3 МБ: по дороге к хостингу
+// соединение рвётся, и чем меньше байт уедет, тем меньше шансов на обрыв.
+// PNG на 2.8 МБ после 1920px/JPEG весит около 250 КБ - разница в разы.
+// Если JPEG вышел не легче исходника (так бывает у мелких PNG), ниже вернётся
+// исходный файл, так что мелочь по-прежнему уходит как есть.
 const MAX_SIDE = 1920;
 
 const compress = async (file) => {
   // PDF не пережимаем: это не картинка, и canvas его не откроет.
-  if (!v.IMAGE_TYPES.includes(file.type) || file.size <= v.MAX_FILE_BYTES) return file;
+  if (!v.IMAGE_TYPES.includes(file.type)) return file;
 
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -155,6 +158,17 @@ const compress = async (file) => {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
   if (!blob || blob.size >= file.size) return file;
   return new File([blob], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
+};
+
+// Отправка с потолком по времени: без него оборванный аплоад висит «Отправляем…»
+// до упора, и игрок закрывает вкладку с заполненной формой.
+const SEND_TIMEOUT = 60e3;
+
+const send = (body) => {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), SEND_TIMEOUT);
+  return fetch('/api/submit', { method: 'POST', body, signal: abort.signal })
+    .finally(() => clearTimeout(timer));
 };
 
 // Превью вместо автоматической проверки на обрезку: игрок видит, что именно
@@ -287,7 +301,10 @@ for (const form of document.querySelectorAll('.form')) {
         payload.set('screenshot', prepared, prepared.name);
       }
 
-      const response = await fetch('/api/submit', { method: 'POST', body: payload });
+      // Обрыв на пути к хостингу - самая частая причина потери заявки, поэтому
+      // один повтор. NOTE: если связь оборвалась уже после записи в базу, повтор
+      // создаст дубль - его видно в Telegram двумя одинаковыми заявками подряд.
+      const response = await send(payload).catch(() => send(payload));
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         // Сессия истекла или её сбросили: возвращаем игрока к кнопке входа.
@@ -314,7 +331,7 @@ for (const form of document.querySelectorAll('.form')) {
       console.error('submit', error);
       const bytes = payload.get('screenshot')?.size ?? 0;
       formError.textContent =
-        error instanceof TypeError
+        error instanceof TypeError || error.name === 'AbortError'
           ? `Заявка не ушла: связь с сервером оборвалась (вложение ${(bytes / 1e6).toFixed(1)} МБ). `
             + 'Проверьте интернет и попробуйте ещё раз или напишите в Discord: cheshirecat247'
           : error.message ||
