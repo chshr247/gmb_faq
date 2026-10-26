@@ -325,15 +325,13 @@ for (const form of document.querySelectorAll('.form')) {
       done.hidden = false;
       scrollTo({ top: 0, behavior });
     } catch (error) {
-      // fetch падает TypeError'ом, когда ответа не было вообще: обрыв связи или
-      // тело больше лимита Vercel. Логов на сервере в этом случае нет, поэтому
-      // причину показываем игроку - размер вложения он назовёт в Discord.
-      console.error('submit', error);
-      const bytes = payload.get('screenshot')?.size ?? 0;
+      // fetch падает TypeError'ом, когда ответа не было вообще: у игроков из
+      // России соединение с хостингом рвут по дороге. Логов на сервере в этом
+      // случае нет, поэтому размер вложения уходит хотя бы в консоль.
+      console.error('submit', error, payload.get('screenshot')?.size ?? 0);
       formError.textContent =
         error instanceof TypeError || error.name === 'AbortError'
-          ? `Заявка не ушла: связь с сервером оборвалась (вложение ${(bytes / 1e6).toFixed(1)} МБ). `
-            + 'Проверьте интернет и попробуйте ещё раз или напишите в Discord: cheshirecat247'
+          ? 'Отправка не удалась. Попробуйте включить VPN и повторите попытку'
           : error.message ||
             'Не удалось отправить заявку. Попробуйте ещё раз или напишите в Discord: cheshirecat247';
     } finally {
