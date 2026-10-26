@@ -9,6 +9,7 @@ create table if not exists public.requests (
                  check (status in ('new','in_progress','done','rejected')),
   steam_id       text not null,
   discord        text not null,
+  discord_id     text,          -- id аккаунта из входа через Discord; ник можно сменить, id нет
   server         text,          -- 1 или 2 сервер; игрок мог не указать
   reason         text,          -- возврат привилегии
   amount         integer,       -- донат: сумма кредитов без комиссии
@@ -24,6 +25,7 @@ create table if not exists public.requests (
 -- Если таблица уже создана раньше - добавить недостающие колонки:
 alter table public.requests add column if not exists server text;
 alter table public.requests add column if not exists ip     text;
+alter table public.requests add column if not exists discord_id text;
 
 create index if not exists requests_created_idx on public.requests (created_at desc);
 create index if not exists requests_status_idx  on public.requests (status);

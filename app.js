@@ -31,6 +31,28 @@ copyButton.addEventListener('click', async () => {
   }
 });
 
+// ── Вход через Discord ────────────────────────────────────────────────
+// Кто вошёл, страница узнаёт из куки discord_name - её ставит /api/discord
+// вместе с сессией. Сессию проверяет сервер, кука здесь только для показа.
+const showLogin = (name, message = '') => {
+  $('#login').hidden = Boolean(name);
+  $('#picker').hidden = !name;
+  $('#who').textContent = name;
+  $('#login-err').textContent = message;
+};
+
+$('#login-button').addEventListener('click', () => { location.href = '/api/discord'; });
+
+{
+  const name = document.cookie.match(/(?:^|;\s*)discord_name=([^;]*)/)?.[1];
+  const failed = new URLSearchParams(location.search).has('login');
+  showLogin(name ? decodeURIComponent(name) : '', failed
+    ? 'Не удалось войти через Discord. Попробуйте ещё раз или напишите в Discord: cheshirecat247'
+    : '');
+  // Чтобы обновление страницы не показывало ошибку входа повторно.
+  if (failed) history.replaceState(null, '', location.pathname);
+}
+
 // ── Дата платежа: не позже сегодняшнего дня по Москве ─────────────────
 // en-CA даёт ровно тот формат ГГГГ-ММ-ДД, который ждёт input[type=date].
 $('#d-paid').max = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Moscow' })
@@ -268,6 +290,12 @@ for (const form of document.querySelectorAll('.form')) {
       const response = await fetch('/api/submit', { method: 'POST', body: payload });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
+        // Сессия истекла или её сбросили: возвращаем игрока к кнопке входа.
+        if (body.login) {
+          $('#again').click();
+          showLogin('', body.error);
+          return;
+        }
         for (const [name, message] of Object.entries(body.errors ?? {})) {
           setError(fieldOf(form, name), message);
         }

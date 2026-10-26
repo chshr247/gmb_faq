@@ -7,7 +7,6 @@ const NOW = Date.parse('2026-08-16T12:00:00Z');
 const ok = (type, extra) =>
   v.validate(type, {
     steam_id: 'STEAM_0:0:43836629',
-    discord: 'cheshirecat247',
     reason: v.REASONS[0],
     amount: '300',
     payment_method: '#3 Карты РФ/СБП (от 300 руб)',
@@ -21,14 +20,10 @@ test('корректные заявки проходят', () => {
   assert.deepEqual(ok('donate'), {});
 });
 
-test('SteamID и Discord', () => {
+test('SteamID', () => {
   assert.ok(v.steamId('STEAM_0:1:5'));
   assert.ok(!v.steamId('7656119801234567'));
   assert.ok(!v.steamId(''));
-  assert.ok(v.discord('@cheshirecat247'));
-  assert.ok(v.discord('old.name#1234'));
-  assert.ok(!v.discord('a'));
-  assert.ok(!v.discord('ник с пробелами'));
 });
 
 test('STEAM_1 предупреждает, но не блокирует заявку', () => {

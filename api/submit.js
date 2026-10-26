@@ -1,4 +1,5 @@
 import * as v from '../validators.js';
+import { verify, cookie } from './_session.js';
 
 // Edge-runtime: у запроса есть готовый formData(), поэтому парсер multipart не нужен.
 export const config = { runtime: 'edge' };
@@ -116,7 +117,7 @@ const caption = (row, notes = []) => {
   lines.push(
     `SteamID: <code>${esc(row.steam_id)}</code>` +
       (v.STEAM_ID_CANON.test(row.steam_id) ? '' : ' ⚠ не STEAM_0, проверьте'),
-    `Discord: <code>${esc(row.discord)}</code>`,
+    `Discord: <code>${esc(row.discord)}</code> · id <code>${esc(row.discord_id)}</code>`,
   );
   if (row.server) lines.push(`Сервер: ${esc(row.server)}`);
   if (row.comment) lines.push(`Коммент: ${esc(row.comment)}`);
@@ -162,6 +163,11 @@ export default async function handler(request, context) {
   if (data.website) return json({ ok: true });
   if (Number(data.elapsed) < v.MIN_FILL_SECONDS) return json({ ok: true });
 
+  // Заявку принимаем только от вошедшего через Discord. Ник берём из сессии,
+  // а не из формы: он настоящий, и за шуточную заявку есть с кого спросить.
+  const session = await verify(cookie(request, 'session'));
+  if (!session) return json({ error: 'Войдите через Discord, чтобы отправить заявку', login: true }, 401);
+
   const errors = v.validate(type, data);
 
   const file = form.get('screenshot');
@@ -199,7 +205,8 @@ export default async function handler(request, context) {
     const row = await insert({
       type,
       steam_id,
-      discord: String(data.discord).trim().replace(/^@/, ''),
+      discord: session.name,
+      discord_id: session.id,
       server: data.server,
       reason: type === 'privilege' ? data.reason : null,
       amount: type === 'donate' ? Number(data.amount) : null,

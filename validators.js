@@ -5,7 +5,6 @@
 // именно её показывает игра. STEAM_1 люди копируют со сторонних сайтов.
 export const STEAM_ID = /^STEAM_[0-9]:[01]:\d{1,12}$/i;
 export const STEAM_ID_CANON = /^STEAM_0:[01]:\d{1,12}$/i;
-export const DISCORD = /^@?[a-zA-Z0-9._]{2,32}(#\d{4})?$/;
 
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const PDF = 'application/pdf';
@@ -152,7 +151,6 @@ export const steamId64 = (id) => {
   return (76561197960265728n + BigInt(z) * 2n + BigInt(y)).toString();
 };
 
-export const discord = (v) => DISCORD.test(String(v ?? '').trim());
 export const reason = (v) => REASONS.includes(v);
 export const server = (v) => SERVERS.includes(v);
 export const paymentMethod = (v) => PAYMENT_METHODS.includes(v);
@@ -196,7 +194,6 @@ export const fileError = (kind) =>
 export function validate(type, d, now = Date.now()) {
   const e = {};
   if (!steamId(d.steam_id)) e.steam_id = 'Формат: STEAM_0:0:43836629';
-  if (!discord(d.discord)) e.discord = 'Укажите ваш Discord (например: cheshirecat247)';
   if (!server(d.server)) e.server = 'Выберите сервер из списка';
 
   if (type === 'privilege') {

@@ -40,11 +40,19 @@
   <header class="head">
     <p class="eyebrow">GambitRP / поддержка</p>
     <h1>Помощь игрокам</h1>
-    <p class="sub">Выберите проблему и заполните форму. Ответ придёт вам в Discord.</p>
+    <p class="sub">Войдите через Discord, выберите проблему и заполните форму. Ответ придёт туда же.</p>
   </header>
 
   <div class="card intro">
-    <div class="field picker">
+    <!-- Какой из двух блоков показать, решает app.js по куке discord_name. -->
+    <div id="login" hidden>
+      <p class="hint">Заявки принимаются только после входа через Discord - ответ придёт в этот аккаунт.</p>
+      <button type="button" id="login-button">Войти через Discord</button>
+      <p class="err" id="login-err"></p>
+    </div>
+
+    <div class="field picker" id="picker" hidden>
+      <p class="hint">Вы вошли как <b id="who"></b> · <a href="/api/discord?logout">Выйти</a></p>
       <label class="label" for="problem">Ваша проблема</label>
       <select id="problem">
         <option value="">- Выберите проблему -</option>
@@ -56,8 +64,8 @@
 
   <section class="intro-only">
     <ol class="steps">
-      <li><span class="step-num">01</span>Выбираете проблему</li>
-      <li><span class="step-num">02</span>Заполняете форму: SteamID, скриншот, Discord</li>
+      <li><span class="step-num">01</span>Входите через Discord</li>
+      <li><span class="step-num">02</span>Выбираете проблему и заполняете форму</li>
       <li><span class="step-num">03</span>Ответ приходит вам в Discord</li>
     </ol>
   </section>
@@ -140,12 +148,6 @@
       </div>
 
       <div class="field">
-        <label class="label" for="p-discord">Ваш Discord</label>
-        <input id="p-discord" name="discord" type="text" placeholder="cheshirecat247" autocomplete="off">
-        <small class="err"></small>
-      </div>
-
-      <div class="field">
         <label class="label" for="p-comment">Комментарий <span class="opt">- необязательно</span></label>
         <textarea id="p-comment" name="comment" rows="3" maxlength="500"></textarea>
       </div>
@@ -212,12 +214,6 @@
           <input id="d-receipt" name="screenshot" type="file"
                  accept="image/jpeg,image/png,image/webp,application/pdf"
                  data-missing="Прикрепите скриншот чека" required>
-          <small class="err"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-discord">Ваш Discord</label>
-          <input id="d-discord" name="discord" type="text" placeholder="cheshirecat247" autocomplete="off">
           <small class="err"></small>
         </div>
 

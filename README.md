@@ -7,6 +7,8 @@
 index.html  styles.css  app.js   фронт
 validators.js                    правила валидации, общие для фронта и бэка
 api/submit.js                    приём заявки (Vercel Edge Function)
+api/discord.js                   вход через Discord
+api/_session.js                  подписанная кука сессии (не маршрут)
 supabase.sql                     таблица и bucket, выполнить один раз
 ```
 
@@ -22,11 +24,16 @@ npm test
 
 ## Развёртывание
 
-1. Выполнить [supabase.sql](supabase.sql) в Supabase → SQL Editor.
+1. Выполнить [supabase.sql](supabase.sql) в Supabase → SQL Editor. Таблица уже
+   есть - всё равно выполнить: добавится колонка `discord_id`, без неё заявки
+   перестанут сохраняться.
 2. Импортировать репозиторий в Vercel (framework preset: **Other**, build command пустой).
-3. Заполнить переменные окружения из [.env.example](.env.example) в настройках проекта Vercel.
-4. Deploy.
-5. Привязать свой домен (Vercel - Settings - Domains). Адрес `*.vercel.app`
+3. Создать приложение Discord (discord.com/developers/applications → New
+   Application → OAuth2): в Redirects добавить `https://<домен>/api/discord`,
+   Client ID и Client Secret - в переменные из следующего шага.
+4. Заполнить переменные окружения из [.env.example](.env.example) в настройках проекта Vercel.
+5. Deploy.
+6. Привязать свой домен (Vercel - Settings - Domains). Адрес `*.vercel.app`
    у части игроков из России не открывается - блокировка идёт по домену, и
    собственный домен на том же деплое её обходит. Если не открывается и он -
    значит заблокированы адреса Vercel, и помогает только перенос на другой
@@ -37,6 +44,9 @@ npm test
 Supabase → Table Editor → `requests`. Это и есть админка: фильтр по `status`,
 правка статуса (`new` → `in_progress` → `done` / `rejected`), заметки в `admin_note`.
 Ответ игроку - в Discord, ник берётся из заявки.
+
+Заявку оставляет только тот, кто вошёл через Discord: ник в заявке берётся из
+аккаунта, а не вводится руками, рядом - id аккаунта (ник можно сменить, id нет).
 
 Выдуманные SteamID форма не принимает: при заданном `STEAM_API_KEY` заявка
 проверяется по профилю в Steam. Скриншот, который браузер счёл обрезанным,
