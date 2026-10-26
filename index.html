@@ -44,8 +44,11 @@
   </header>
 
   <div class="card intro">
-    <!-- Какой из двух блоков показать, решает app.js по куке discord_name. -->
-    <div id="login" hidden>
+    <!-- Какой из двух блоков показать, решает app.js по куке discord_name.
+         Вход показан по умолчанию намеренно: если app.js не доехал (у игроков
+         из России связь с хостингом рвётся), игрок видит кнопку входа, а не
+         пустую карточку. Вошедшему блок прячет showLogin. -->
+    <div id="login">
       <p class="hint">Заявки принимаются только после входа через Discord - ответ придёт в этот аккаунт.</p>
       <button type="button" id="login-button">Войти через Discord</button>
       <p class="err" id="login-err"></p>
