@@ -105,11 +105,13 @@ for (const input of document.querySelectorAll('input[name="steam_id"]')) {
   });
 }
 
-// ── Проверка картинки: тип и размер ───────────────────────────────────
-const checkImage = (input) => {
+// ── Проверка вложения: тип и размер ───────────────────────────────────
+// Что принимаем, зависит от формы: у чека это ещё и PDF.
+const checkFile = (input) => {
   const file = input.files[0];
+  const kind = input.form.dataset.type;
   if (!file) return input.required ? input.dataset.missing ?? 'Прикрепите скриншот' : '';
-  return v.sourceFile(file) ? '' : 'Только JPG, PNG или WEBP размером до 20 МБ';
+  return v.sourceFile(file, kind) ? '' : v.fileError(kind);
 };
 
 // Скриншоты в PNG легко весят больше, чем принимает сервер (3 МБ), поэтому
@@ -117,7 +119,8 @@ const checkImage = (input) => {
 const MAX_SIDE = 1920;
 
 const compress = async (file) => {
-  if (file.size <= v.MAX_FILE_BYTES) return file;
+  // PDF не пережимаем: это не картинка, и canvas его не откроет.
+  if (!v.IMAGE_TYPES.includes(file.type) || file.size <= v.MAX_FILE_BYTES) return file;
 
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -142,7 +145,7 @@ const showPreview = (input, message) => {
   URL.revokeObjectURL(img.src);
 
   const file = input.files[0];
-  if (!file || message) {
+  if (!file || message || !v.IMAGE_TYPES.includes(file.type)) {
     img.removeAttribute('src');
     preview.hidden = true;
     return;
@@ -192,7 +195,7 @@ const measure = async (file) => {
 for (const input of document.querySelectorAll('input[type="file"]')) {
   input.addEventListener('change', async () => {
     const field = input.closest('.field');
-    const message = checkImage(input);
+    const message = checkFile(input);
     setError(field, message);
     showPreview(input, message);
     setNote(field, '');
@@ -225,7 +228,7 @@ for (const form of document.querySelectorAll('.form')) {
     const errors = v.validate(type, data);
 
     const shot = $('input[type="file"]', form);
-    const shotError = checkImage(shot);
+    const shotError = checkFile(shot);
     if (shotError) errors.screenshot = shotError;
 
     for (const field of form.querySelectorAll('.field')) setError(field, '');
@@ -248,8 +251,10 @@ for (const form of document.querySelectorAll('.form')) {
     try {
       if (shot.files[0]) {
         const prepared = await compress(shot.files[0]);
-        if (!v.imageFile(prepared)) {
-          throw new Error('Скриншот слишком большой даже после сжатия. Сохраните его в JPG и попробуйте снова');
+        if (!v.attachment(prepared, type)) {
+          throw new Error(prepared.type === v.PDF
+            ? 'PDF тяжелее 3 МБ не проходит - пришлите чек картинкой или сохраните PDF полегче'
+            : 'Скриншот слишком большой даже после сжатия. Сохраните его в JPG и попробуйте снова');
         }
         payload.set('screenshot', prepared, prepared.name);
       }

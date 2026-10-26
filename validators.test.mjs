@@ -132,13 +132,22 @@ test('причина, по которой скриншот не похож на 
 });
 
 test('файлы: тип и размер', () => {
-  assert.ok(v.imageFile({ type: 'image/png', size: 1000 }));
-  assert.ok(!v.imageFile({ type: 'application/pdf', size: 1000 }));
-  assert.ok(!v.imageFile({ type: 'image/png', size: 9e6 }), 'выше лимита Vercel в 4 МБ');
-  assert.ok(!v.imageFile({ type: 'image/png', size: 4 * 1024 * 1024 }), '4 МиБ рвёт edge-функцию');
-  assert.ok(v.sourceFile({ type: 'image/png', size: 9e6 }), 'исходник крупнее - пережмётся');
-  assert.ok(!v.sourceFile({ type: 'image/png', size: 25e6 }));
-  assert.ok(!v.imageFile({ type: 'image/png', size: 0 }));
+  assert.ok(v.attachment({ type: 'image/png', size: 1000 }, 'privilege'));
+  assert.ok(!v.attachment({ type: 'image/png', size: 9e6 }, 'privilege'), 'выше лимита Vercel в 4 МБ');
+  assert.ok(!v.attachment({ type: 'image/png', size: 4 * 1024 * 1024 }, 'privilege'), '4 МиБ рвёт edge-функцию');
+  assert.ok(v.sourceFile({ type: 'image/png', size: 9e6 }, 'privilege'), 'исходник крупнее - пережмётся');
+  assert.ok(!v.sourceFile({ type: 'image/png', size: 25e6 }, 'privilege'));
+  assert.ok(!v.attachment({ type: 'image/png', size: 0 }, 'privilege'));
+});
+
+test('PDF принимаем только там, где это чек', () => {
+  assert.ok(v.attachment({ type: v.PDF, size: 1000 }, 'donate'));
+  assert.ok(!v.attachment({ type: v.PDF, size: 1000 }, 'privilege'), 'лог покупок - только скриншот');
+  assert.ok(!v.attachment({ type: v.PDF, size: 1000 }), 'без типа заявки PDF не принимаем');
+
+  // PDF не пережимается, поэтому к выбору файла та же мерка, что и к отправке.
+  assert.ok(!v.sourceFile({ type: v.PDF, size: 9e6 }, 'donate'), 'крупный PDF сжать нечем');
+  assert.ok(v.sourceFile({ type: v.PDF, size: 1e6 }, 'donate'));
 });
 
 test('номер сервера обязателен, как и SteamID', () => {

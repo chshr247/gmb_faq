@@ -8,6 +8,16 @@ export const STEAM_ID_CANON = /^STEAM_0:[01]:\d{1,12}$/i;
 export const DISCORD = /^@?[a-zA-Z0-9._]{2,32}(#\d{4})?$/;
 
 export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const PDF = 'application/pdf';
+
+// Чек банки и платёжки часто отдают готовым PDF - пересохранять его картинкой
+// игрок не обязан. А лог покупок - это всегда снимок экрана игры, PDF там
+// взяться неоткуда, поэтому список допустимых типов свой на каждую форму.
+export const FILE_TYPES = {
+  privilege: IMAGE_TYPES,
+  donate: [...IMAGE_TYPES, PDF],
+};
+
 export const MIN_FILL_SECONDS = 3;
 
 // Сколько может весить файл, который реально уходит на сервер. Потолок задан не
@@ -157,13 +167,24 @@ export const paidAt = (v, now = Date.now()) => {
   return t <= now + 24 * 3600 * 1000 && t > now - YEAR; // сутки запаса на часовые пояса
 };
 
-// Проверка того, что уходит на сервер (и того, что сервер принимает).
-export const imageFile = ({ type, size }) =>
-  IMAGE_TYPES.includes(type) && size > 0 && size <= MAX_FILE_BYTES;
+// kind - тип заявки: от него зависит, принимаем ли PDF. Без него - только картинки.
+const typeAllowed = (type, kind) => (FILE_TYPES[kind] ?? IMAGE_TYPES).includes(type);
 
-// Проверка выбранного файла до сжатия.
-export const sourceFile = ({ type, size }) =>
-  IMAGE_TYPES.includes(type) && size > 0 && size <= MAX_SOURCE_BYTES;
+// Проверка того, что уходит на сервер (и того, что сервер принимает).
+export const attachment = ({ type, size }, kind) =>
+  typeAllowed(type, kind) && size > 0 && size <= MAX_FILE_BYTES;
+
+// Проверка выбранного файла до сжатия. Картинку браузер пережмёт, PDF - нет,
+// поэтому у PDF потолок сразу серверный.
+export const sourceFile = ({ type, size }, kind) =>
+  typeAllowed(type, kind) && size > 0
+  && size <= (type === PDF ? MAX_FILE_BYTES : MAX_SOURCE_BYTES);
+
+// Одно сообщение на фронт и на сервер, чтобы лимиты в текстах не разъезжались.
+export const fileError = (kind) =>
+  kind === 'donate'
+    ? 'Чек: JPG, PNG или WEBP до 20 МБ, либо PDF до 3 МБ'
+    : 'Только JPG, PNG или WEBP размером до 20 МБ';
 
 // Проверяет заявку целиком. Возвращает объект ошибок: {} - заявка валидна.
 export function validate(type, d, now = Date.now()) {

@@ -15,7 +15,7 @@ const PER_HOUR = 3;
 const PER_DAY = 10;
 const SIGNED_URL_SECONDS = 60 * 60 * 24 * 365;
 
-const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', [v.PDF]: 'pdf' };
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -146,7 +146,7 @@ export default async function handler(request, context) {
 
   const file = form.get('screenshot');
   const hasFile = file instanceof File && file.size > 0;
-  if (hasFile && !v.imageFile(file)) errors.screenshot = 'Только JPG, PNG или WEBP до 5 МБ';
+  if (hasFile && !v.attachment(file, type)) errors.screenshot = v.fileError(type);
   if (!hasFile) {
     errors.screenshot =
       type === 'privilege' ? 'Прикрепите скриншот лога покупок' : 'Прикрепите скриншот чека';
