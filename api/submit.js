@@ -9,6 +9,7 @@ const {
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID,
   IP_SALT,
+  STEAM_API_KEY,
 } = process.env;
 
 const PER_HOUR = 3;
@@ -26,6 +27,24 @@ const json = (body, status = 200) =>
 const sha256 = async (text) => {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+// Самый дешёвый фильтр выдуманных заявок: у выдуманного SteamID нет профиля в
+// Steam. Ключа нет или Steam не ответил - считаем, что не знаем, и пропускаем:
+// чужая недоступность не повод терять живого игрока.
+const steamExists = async (id) => {
+  if (!STEAM_API_KEY) return true;
+  try {
+    const response = await fetch(
+      'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/'
+        + `?key=${STEAM_API_KEY}&steamids=${v.steamId64(id)}`,
+    );
+    if (!response.ok) return true;
+    const { response: { players } = {} } = await response.json();
+    return !players || players.length > 0;
+  } catch {
+    return true;
+  }
 };
 
 const sb = (path, init = {}) =>
@@ -80,7 +99,7 @@ const insert = async (row) => {
 const esc = (value) =>
   String(value ?? '-').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
-const caption = (row) => {
+const caption = (row, notes = []) => {
   const lines =
     row.type === 'privilege'
       ? [
@@ -101,14 +120,15 @@ const caption = (row) => {
   );
   if (row.server) lines.push(`Сервер: ${esc(row.server)}`);
   if (row.comment) lines.push(`Коммент: ${esc(row.comment)}`);
+  lines.push(...notes);
   return lines.join('\n');
 };
 
 // sendDocument, а не sendPhoto: Telegram сжимает фото, и мелкий текст лога покупок
 // становится нечитаемым.
-const notify = async (row, file) => {
+const notify = async (row, file, notes) => {
   const api = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
-  const text = caption(row);
+  const text = caption(row, notes);
 
   if (file) {
     const form = new FormData();
@@ -171,9 +191,14 @@ export default async function handler(request, context) {
       return json({ error: 'Слишком много заявок. Попробуйте позже или напишите в Discord: cheshirecat247' }, 429);
     }
 
+    const steam_id = String(data.steam_id).trim().toUpperCase();
+    if (!(await steamExists(steam_id))) {
+      return json({ errors: { steam_id: 'Профиля с таким SteamID нет в Steam. Свой ID видно в игре в консоли по команде status' } }, 400);
+    }
+
     const row = await insert({
       type,
-      steam_id: String(data.steam_id).trim().toUpperCase(),
+      steam_id,
       discord: String(data.discord).trim().replace(/^@/, ''),
       server: data.server,
       reason: type === 'privilege' ? data.reason : null,
@@ -193,7 +218,11 @@ export default async function handler(request, context) {
     // Ответ игроку не ждёт Telegram: это вторая заливка того же скриншота, и
     // вместе с заливкой в Supabase она упиралась в лимит времени Edge-функции -
     // игрок видел «связь оборвалась» при уже сохранённой заявке.
-    const sent = notify(row, hasFile ? file : null)
+    // Вердикт браузера о кадре в заявку не пишем - он подсказка админу в
+    // Telegram, чтобы обрезанный скриншот было видно, не открывая заявку.
+    const notes = data.crop ? ['⚠ браузер счёл скриншот обрезанным'] : [];
+
+    const sent = notify(row, hasFile ? file : null, notes)
       .then(async (response) => {
         if (!response.ok) console.error(`telegram ${response.status}: ${await response.text()}`);
       })

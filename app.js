@@ -199,6 +199,7 @@ for (const input of document.querySelectorAll('input[type="file"]')) {
     setError(field, message);
     showPreview(input, message);
     setNote(field, '');
+    input.dataset.crop = '';
 
     // Чек из банка - законно обрезанный скриншот, его не проверяем.
     const file = input.files[0];
@@ -207,7 +208,11 @@ for (const input of document.querySelectorAll('input[type="file"]')) {
       const stats = await measure(file);
       console.debug('screenshot', file.name, stats); // пороги крутятся в validators.js CROP
       // Пока считали, игрок мог выбрать другой файл.
-      if (input.files[0] === file) setNote(field, CROP_NOTE[v.cropReason(stats)] ?? '');
+      if (input.files[0] !== file) return;
+      // Вердикт уезжает вместе с заявкой: игрока он не блокирует, но в Telegram
+      // видно, что кадр обрезан, и заявку не нужно открывать, чтобы это понять.
+      input.dataset.crop = v.cropReason(stats);
+      setNote(field, CROP_NOTE[input.dataset.crop] ?? '');
     } catch {
       // Битый или экзотический файл: это подсказка, а не проверка - молчим.
     }
@@ -245,6 +250,7 @@ for (const form of document.querySelectorAll('.form')) {
     const payload = new FormData(form);
     payload.set('type', type);
     payload.set('elapsed', String(Math.round((Date.now() - openedAt) / 1000)));
+    payload.set('crop', shot.dataset.crop ?? '');
 
     button.disabled = true;
     button.textContent = 'Отправляем…';

@@ -140,6 +140,12 @@ test('файлы: тип и размер', () => {
   assert.ok(!v.attachment({ type: 'image/png', size: 0 }, 'privilege'));
 });
 
+test('SteamID64 для Steam API', () => {
+  assert.equal(v.steamId64('STEAM_0:0:1'), '76561197960265730');
+  assert.equal(v.steamId64('STEAM_0:1:1'), '76561197960265731', 'младший бит - это Y');
+  assert.equal(v.steamId64('STEAM_0:0:43836629'), '76561198047938986');
+});
+
 test('PDF принимаем только там, где это чек', () => {
   assert.ok(v.attachment({ type: v.PDF, size: 1000 }, 'donate'));
   assert.ok(!v.attachment({ type: v.PDF, size: 1000 }, 'privilege'), 'лог покупок - только скриншот');

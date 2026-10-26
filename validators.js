@@ -146,6 +146,12 @@ export const steamIdNote = (v) => {
     ? 'Все SteamID на сервере начинаются с STEAM_0. Проверьте первую цифру - похоже, ID скопирован со стороннего сайта и при разбане табличный бан снимается вручную, а обычный выдаётся заново после разбана, компенсируя табличку. Заполняйте дальше, заявку это не блокирует.'
     : '';
 };
+// STEAM_0:Y:Z -> SteamID64 для Steam API: база аккаунтов + Z*2 + Y.
+export const steamId64 = (id) => {
+  const [, y, z] = String(id).split(':');
+  return (76561197960265728n + BigInt(z) * 2n + BigInt(y)).toString();
+};
+
 export const discord = (v) => DISCORD.test(String(v ?? '').trim());
 export const reason = (v) => REASONS.includes(v);
 export const server = (v) => SERVERS.includes(v);
