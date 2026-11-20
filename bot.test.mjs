@@ -69,7 +69,7 @@ test('неверный ввод не сдвигает шаг', async () => {
 
   let r = await step(at, { text: '7656119801234567' }, NOW, deps);
   assert.equal(r.state, at, 'не тот формат');
-  assert.match(r.replies[0].text, /Формат/);
+  assert.match(r.replies[0].text, /Не похоже на SteamID/);
 
   r = await step(at, { text: 'STEAM_0:0:1' }, NOW, deps);
   assert.equal(r.state, at, 'профиля нет в Steam');
@@ -90,16 +90,31 @@ test('STEAM_1 предупреждает, но пропускает дальше
   assert.equal(r.replies.length, 2, 'предупреждение + следующий вопрос');
 });
 
-test('сжатое фото: пометка, и файл на шаге комментария его заменяет', async () => {
-  const at = { step: 'file', draft: { type: 'privilege' } };
-  let r = await step(at, { file: { id: 'PH', kind: 'photo' } }, NOW, deps);
+test('фото принимается молча, без предупреждения о сжатии', async () => {
+  const r = await step({ step: 'file', draft: { type: 'privilege' } }, { file: { id: 'PH', kind: 'photo' } }, NOW, deps);
+  assert.equal(r.state.step, 'comment');
   assert.equal(r.state.draft.file_kind, 'photo');
-  assert.match(r.replies[0].text, /сжал/);
+  assert.equal(r.replies.length, 1, 'только следующий вопрос');
+});
 
-  r = await step(r.state, DOC, NOW, deps);
-  assert.equal(r.state.step, 'comment', 'остаёмся на комментарии');
-  assert.equal(r.state.draft.file_id, 'F1');
-  assert.equal(r.state.draft.file_kind, 'document');
+test('условия привилегии листаются правкой того же сообщения, «Подходит» - на последней', async () => {
+  let r = await step(null, { data: 't:privilege' }, NOW, deps);
+  const data = (reply) => reply.buttons.flat().map((b) => b.callback_data);
+  assert.deepEqual(data(r.replies[0]), ['gp:1', 'cancel'], 'стр. 1: только «Дальше» и отмена');
+
+  for (const page of [1, 2, 3]) {
+    r = await step(r.state, { data: `gp:${page}` }, NOW, deps);
+    assert.equal(r.state.step, 'gate', 'листание не сдвигает шаг');
+    assert.equal(r.replies[0].edit, true, 'правим то же сообщение');
+    assert.match(r.replies[0].text, new RegExp(`\\(${page + 1}/4\\)`));
+    assert.equal(data(r.replies[0]).includes('gate'), page === 3, `«Подходит» на стр. ${page + 1}`);
+  }
+
+  r = await step(r.state, { data: 'gp:0' }, NOW, deps);
+  assert.match(r.replies[0].text, /\(1\/4\)/, 'назад работает');
+
+  r = await step(r.state, { data: 'gate' }, NOW, deps);
+  assert.equal(r.state.step, 'steam');
 });
 
 test('под каждым вопросом анкеты - кнопка «Отмена», и она работает', async () => {

@@ -26,8 +26,9 @@ const MY_BUTTON = '📄 Мои заявки';
 const PANEL_BUTTON = '📋 Все заявки';
 const BUTTONS = [NEW_BUTTON, MY_BUTTON, PANEL_BUTTON];
 
-const BLOCKED_TEXT = 'Вы заблокированы в поддержке. Обжаловать - в Discord: cheshirecat247';
-const CLOSED = 'Сообщения по этой заявке больше не принимаются. Остался вопрос - подайте новую заявку.';
+const DISCORD = 'cheshirecat247';
+const BLOCKED_TEXT = `Вы заблокированы в поддержке. Обжаловать можно в Discord: ${DISCORD}`;
+const CLOSED = `Сообщения по ней больше не принимаются. Остался вопрос: пишите в Discord ${DISCORD}.`;
 
 export const STATUS = {
   new: '🆕 Новая',
@@ -37,67 +38,81 @@ export const STATUS = {
 };
 
 const DONE_TEXT = {
-  privilege: 'Привилегия будет выдана в течение дня.',
-  donate: 'Проверка занимает от 1 до 3 дней. По истечении проверки с большой вероятностью вы увидите кредиты у себя на балансе.',
+  privilege: 'Привилегию выдадут в течение дня.',
+  donate: 'Проверка займёт от 1 до 3 дней. Обычно после неё кредиты появляются на балансе.',
 };
 
 const PLAYER_STATUS = {
-  in_progress: (r) => `🔄 Заявка #${r.id} взята на рассмотрение.`,
+  in_progress: (r) => `🔄 Заявку #${r.id} взяли на рассмотрение.`,
   done: (r) => `✅ Заявка #${r.id}: ${r.type === 'privilege' ? 'привилегия выдана' : 'донат выдан'}.\n${CLOSED}`,
-  rejected: (r) => `❌ Заявка #${r.id} отклонена.\n${CLOSED}`,
+  rejected: (r) => `❌ Заявку #${r.id} отклонили.\n${CLOSED}`,
 };
 
-// ── Тексты анкеты (дословно с сайта) ─────────────────────────────────
+// ── Тексты анкеты ────────────────────────────────────────────────────
+// Пишем коротко: игроки - в основном школьники, длинный текст не дочитывают.
 
-const PRIVILEGE_GUIDE = `<b>Возврат привилегии</b>
+// Условия возврата привилегии - по странице на мысль. «Подходит» только на
+// последней: чтобы до неё дойти, придётся пролистать все.
+const GUIDE = [
+  `<b>Когда возвращаем привилегию</b> (1/4)
 
-✅ <b>Привилегию возвращаем в 3 случаях</b>
-1. <b>После наборки.</b> Вы заняли пост наборного администратора, имея донатную привилегию. После снятия с наборки донатная админка подлежит восстановлению.
-2. <b>Автоснятие.</b> При спаме ULX-командами система считает, что вы можете сливать админку, и снимает привилегию. Если вы не сливали админку - она будет восстановлена.
-3. <b>Забыли снять варны с прошлой админки.</b> Варны перенеслись на новую привилегию и система сняла вас по лимиту (5 варнов). Если на текущей привилегии вы столько не получали - админка будет восстановлена.
+Вернём в одном из трёх случаев:
+1. У вас была донатная админка, вы ушли в наборные админы, а теперь вас сняли с наборки.
+2. Система сняла админку за спам ULX-командами, а вы ничего не сливали.
+3. Вас сняли по лимиту в 5 варнов, но на этой админке вы столько не получали: варны перешли со старой.`,
 
-⛔ <b>Привилегию НЕ возвращаем, если</b>
-• это VIP - возвращаем только донатные админки от д-модера и выше;
-• привилегия утеряна более полугода назад (для наборной админки отсчёт идёт с момента снятия с наборки);
-• вас сняли с донатной админки, а вернуть вы пытаетесь более старую привилегию;
-• отсутствует лог покупок.
-<i>Отказ возможен и по причине, не указанной выше. Если привилегия куплена давно, могут понадобиться дополнительные скриншоты с прокруткой вверх.</i>
+  `<b>Когда не возвращаем</b> (2/4)
 
-<b>Где взять лог покупок?</b> Нажмите <b>F4</b> → откройте <b>Донат</b> → справа сверху иконка профиля → <b>Все логи</b>. Сделайте скриншот с покупкой той привилегии, которую нужно вернуть. Подойдёт и скриншот переписки с Артуром, если вы обновлялись или покупали не через F4.
+• У вас VIP. Возвращаем только донатные админки, от д-модера и выше.
+• Прошло больше полугода. Для наборных считаем со дня, когда сняли с наборки.
+• Сняли с одной админки, а вернуть хотите другую, более старую.
+• Нет лога покупок.
 
-Нажмите кнопку, если вы прочитали условия выше, ваша ситуация подходит под один из трёх случаев, и у вас есть <b>полный, необрезанный</b> скриншот лога покупок.`;
+Отказать могут и по другой причине.`,
+
+  `<b>Где взять лог покупок</b> (3/4)
+
+В игре нажмите F4 → Донат → иконка профиля справа сверху → Все логи. Сделайте скриншот всего экрана, где видна покупка этой привилегии.
+
+Покупали не через F4 или обновлялись? Подойдёт скриншот переписки с Артуром.
+Если покупка давняя, могут попросить ещё скриншоты, прокрученные выше.`,
+
+  `<b>Всё подходит?</b> (4/4)
+
+Жмите «Подходит», если ваш случай есть на первой странице и у вас есть скриншот лога покупок на весь экран, без обрезки.`,
+];
+
+const guidePage = (n) => ({
+  text: GUIDE[n],
+  buttons: [[
+    ...(n > 0 ? [btn('← Назад', `gp:${n - 1}`)] : []),
+    n < GUIDE.length - 1 ? btn('Дальше →', `gp:${n + 1}`) : btn('✅ Подходит', 'gate'),
+  ]],
+});
 
 const DONATE_INTRO = `<b>Не пришёл донат</b>
-Заполните анкету - платёж будет проверен вручную.
+Мы проверим платёж вручную.
 
-Способ оплаты, который вы выбирали на сайте:`;
+Каким способом вы платили на сайте?`;
 
-const STEAM_ASK = `Ваш SteamID, например <code>STEAM_0:0:43836629</code>
+const STEAM_ASK = `Напишите ваш SteamID. Пример: <code>STEAM_0:0:43836629</code>
 
-<b>Где взять?</b> Находясь на сервере, откройте <b>TAB</b>, найдите там себя и нажмите «Скопировать SteamID».`;
+Как узнать: зайдите на сервер, откройте TAB, найдите себя и нажмите «Скопировать SteamID».`;
 
-const STEAM_MISSING = 'Профиля с таким SteamID нет в Steam. Свой ID видно в игре в консоли по команде <code>status</code>.';
+const STEAM_MISSING = 'В Steam нет профиля с таким ID. Проверьте его: в игре откройте консоль и введите <code>status</code>.';
 
-const AS_FILE = 'Отправляйте <b>файлом</b> (📎 → Файл), а не фото: Telegram сжимает фото, и мелкий текст становится нечитаемым.';
+const SHOT_ASK = 'Пришлите скриншот лога покупок. На нём должен быть весь экран, от угла до угла. Обрезанные скриншоты и фото монитора не принимаем.';
 
-const SHOT_ASK = `Пришлите скриншот лога покупок.
-
-Скриншот должен показывать <b>весь экран целиком, от угла до угла</b>. Обрезанные скриншоты и фотографии монитора не принимаются.
-
-${AS_FILE}`;
-
-const RECEIPT_ASK = `Пришлите скриншот чека или квитанции - из банка или платёжной системы, где видны сумма и время платежа. Картинкой или PDF.
-
-${AS_FILE}`;
-
-const PHOTO_NOTE = '⚠ Telegram сжал фото - мелкий текст может стать нечитаемым. Если так, пришлите тот же скриншот <b>файлом</b> прямо сейчас - он заменит фото. Или продолжайте.';
+const RECEIPT_ASK = 'Пришлите чек из банка или платёжной системы. На нём должны быть видны сумма и время платежа. Подойдёт картинка или PDF.';
 
 // ── Мелочи ───────────────────────────────────────────────────────────
 
 export const esc = (value) =>
   String(value ?? '-').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-const btn = (text, callback_data) => ({ text, callback_data });
+function btn(text, callback_data) {
+  return { text, callback_data };
+}
 
 // Варианты кнопками. В callback_data - номер, а не текст: лимит там 64 байта,
 // а кириллица - два байта на букву.
@@ -150,7 +165,6 @@ export const card = (row, blocked = false) => [
   row.telegram_id
     ? `Telegram: <a href="tg://user?id=${row.telegram_id}">${esc(row.telegram_name)}</a> · id <code>${row.telegram_id}</code>`
     : `Discord: <code>${esc(row.discord)}</code> · id <code>${esc(row.discord_id)}</code> (с сайта)`,
-  ...(row.tg_file_kind === 'photo' ? ['⚠ Telegram сжал фото - мелкий текст может не читаться'] : []),
   ...(row.screenshot_url ? [`<a href="${esc(row.screenshot_url)}">Скриншот</a>`] : []),
   ...(blocked ? ['🚫 Игрок заблокирован'] : []),
   ...(row.telegram_id ? ['', '<i>«💬 Ответить» или Reply на это сообщение - ответ уйдёт игроку.</i>'] : []),
@@ -168,36 +182,30 @@ const cardKb = (row, blocked) => [
 ];
 
 const welcome = () => ({
-  text: `Выберите вашу проблему:
+  text: `Что случилось? Выберите:
 
-<i>Вопрос вне списка? Напишите в Discord - cheshirecat247</i>`,
+<i>Другой вопрос? Пишите в Discord: ${DISCORD}</i>`,
   buttons: [[btn('Нужно вернуть привилегию', 't:privilege')], [btn('Не пришёл донат', 't:donate')]],
 });
 
 // ── Анкета ───────────────────────────────────────────────────────────
 // take() возвращает:
-//   undefined           - ввод не того вида (текст вместо кнопки и т.п.)
-//   { error }           - ввод того вида, но неверный
-//   { set, note, stay } - принято; stay - остаться на этом же шаге
-//   { end }             - анкета закончена без заявки
-//   { submit: true }    - отправить
-
-const takeFile = (file, d) => {
-  if (!file) return undefined;
-  if (file.kind === 'photo') return { set: { file_id: file.id, file_kind: 'photo' }, note: PHOTO_NOTE };
-  // Любая картинка: превью игрок видит у себя в чате, а сжимать её нам больше
-  // не нужно - файл остаётся в Telegram и пересылается админу по file_id.
-  const ok = file.mime?.startsWith('image/') || (d.type === 'donate' && file.mime === v.PDF);
-  return ok
-    ? { set: { file_id: file.id, file_kind: 'document' } }
-    : { error: d.type === 'donate' ? 'Нужна картинка или PDF с чеком.' : 'Нужна картинка - скриншот лога покупок.' };
-};
+//   undefined        - ввод не того вида (текст вместо кнопки и т.п.)
+//   { error }        - ввод того вида, но неверный
+//   { set, note }    - принято, дальше следующий шаг
+//   { show }         - остаться на шаге и перерисовать нажатое сообщение
+//   { end }          - анкета закончена без заявки
+//   { submit: true } - отправить
 
 const STEPS = {
   gate: {
-    ask: () => ({ text: PRIVILEGE_GUIDE, buttons: [[btn('✅ Подходит, продолжить', 'gate')]] }),
-    hint: 'Нажмите кнопку под условиями выше.',
-    take: ({ data }) => (data === 'gate' ? { set: {} } : undefined),
+    ask: () => guidePage(0),
+    hint: 'Листайте кнопками под сообщением выше.',
+    take: ({ data }) => {
+      if (data === 'gate') return { set: {} };
+      const page = data?.match(/^gp:(\d)$/)?.[1];
+      return page && GUIDE[page] ? { show: guidePage(Number(page)) } : undefined;
+    },
   },
   method: {
     ask: () => ({ text: DONATE_INTRO, buttons: choices(v.PAYMENT_METHODS, 'm') }),
@@ -209,8 +217,7 @@ const STEPS = {
       const { name, url } = v.EXTERNAL_SUPPORT[method];
       return {
         end: {
-          text: `<b>Эта проблема решается не администрацией сервера</b>
-По выбранному способу оплаты вопрос решает поддержка платёжной системы. Обратитесь напрямую:`,
+          text: 'Этот способ оплаты проверяем не мы, а поддержка платёжной системы. Напишите им:',
           buttons: [[{ text: name, url }]],
         },
       };
@@ -222,14 +229,14 @@ const STEPS = {
     take: async ({ text }, d, now, deps) => {
       if (!text) return undefined;
       const id = text.toUpperCase();
-      if (!v.steamId(id)) return { error: 'Формат: <code>STEAM_0:0:43836629</code>' };
+      if (!v.steamId(id)) return { error: 'Не похоже на SteamID. Нужно так: <code>STEAM_0:0:43836629</code>' };
       if (deps.steamExists && !(await deps.steamExists(id))) return { error: STEAM_MISSING };
       const note = v.steamIdNote(id);
       return { set: { steam_id: id }, note: note && `⚠ ${note}` };
     },
   },
   server: {
-    ask: () => ({ text: 'Сервер:', buttons: choices(v.SERVERS, 's') }),
+    ask: () => ({ text: 'На каком сервере?', buttons: choices(v.SERVERS, 's') }),
     hint: 'Выберите сервер кнопкой.',
     take: ({ data }) => {
       const server = pick(data, 's', v.SERVERS);
@@ -237,7 +244,7 @@ const STEPS = {
     },
   },
   reason: {
-    ask: () => ({ text: 'Причина пропажи привилегии:', buttons: choices(v.REASONS, 'r') }),
+    ask: () => ({ text: 'Почему пропала привилегия?', buttons: choices(v.REASONS, 'r') }),
     hint: 'Выберите причину кнопкой.',
     take: ({ data }) => {
       const reason = pick(data, 'r', v.REASONS);
@@ -245,56 +252,54 @@ const STEPS = {
     },
   },
   amount: {
-    ask: () => ({ text: 'Точная сумма кредитов - именно кредитов, <b>без учёта комиссии</b>. Например: <code>300</code>' }),
-    hint: 'Напишите сумму числом.',
+    ask: () => ({ text: 'Сколько кредитов вы купили? Пишите число кредитов без комиссии. Например: <code>300</code>' }),
+    hint: 'Напишите число кредитов.',
     take: ({ text }) => {
       if (!text) return undefined;
       const n = text.replace(/\s/g, '');
-      return v.amount(n) ? { set: { amount: Number(n) } } : { error: 'Целое число кредитов больше нуля.' };
+      return v.amount(n) ? { set: { amount: Number(n) } } : { error: 'Нужно целое число кредитов, больше нуля.' };
     },
   },
   paid: {
     ask: () => ({
-      text: 'Дата платежа по московскому времени - <code>ДД.ММ.ГГГГ</code>, или кнопкой:',
+      text: 'Когда платили? Дата по Москве, например <code>05.08.2026</code>. Или нажмите кнопку.',
       buttons: [[btn('Сегодня', 'd:0'), btn('Вчера', 'd:1')]],
     }),
-    hint: 'Напишите дату как <code>ДД.ММ.ГГГГ</code> или нажмите кнопку.',
+    hint: 'Напишите дату, например <code>05.08.2026</code>, или нажмите кнопку.',
     take: ({ text, data }, d, now) => {
       const day = data?.match(/^d:([01])$/)?.[1];
       if (!day && !text) return undefined;
       const date = day ? mskDate(now - Number(day) * 864e5) : parseDate(text);
       return v.paidAt(date, now)
         ? { set: { paid_at: date } }
-        : { error: 'Укажите дату платежа как <code>ДД.ММ.ГГГГ</code> - не позже сегодняшнего дня и не раньше, чем год назад.' };
+        : { error: 'Не понял дату. Пишите так: <code>05.08.2026</code>. Не позже сегодня и не раньше, чем год назад.' };
     },
   },
   file: {
     ask: (d) => ({ text: d.type === 'privilege' ? SHOT_ASK : RECEIPT_ASK }),
-    hint: 'Пришлите файл со скриншотом.',
-    take: ({ file }, d) => takeFile(file, d),
+    hint: 'Пришлите скриншот: фото или файл.',
+    take: ({ file }, d) => {
+      if (!file) return undefined;
+      // Фото принимаем как есть: Telegram жмёт его, но текст обычно читается.
+      if (file.kind === 'photo') return { set: { file_id: file.id, file_kind: 'photo' } };
+      const ok = file.mime?.startsWith('image/') || (d.type === 'donate' && file.mime === v.PDF);
+      return ok
+        ? { set: { file_id: file.id, file_kind: 'document' } }
+        : { error: d.type === 'donate' ? 'Нужна картинка или PDF с чеком.' : 'Нужна картинка со скриншотом лога покупок.' };
+    },
   },
   comment: {
-    ask: () => ({ text: 'Комментарий - необязательно. Напишите его или нажмите «Пропустить».', buttons: [[btn('Пропустить', 'skip')]] }),
+    ask: () => ({ text: 'Хотите что-то добавить? Напишите или нажмите «Пропустить».', buttons: [[btn('Пропустить', 'skip')]] }),
     hint: 'Напишите комментарий или нажмите «Пропустить».',
-    take: ({ text, data, file }, d) => {
-      // Файл здесь - это замена сжатого фото, о которой просили шагом раньше.
-      if (file) {
-        const r = takeFile(file, d);
-        return r.error ? r : { ...r, stay: true, note: r.note ?? 'Файл заменён.' };
-      }
+    take: ({ text, data }) => {
       if (data === 'skip') return { set: { comment: null } };
       if (!text) return undefined;
-      return text.length > 500 ? { error: 'Не длиннее 500 символов.' } : { set: { comment: text } };
+      return text.length > 500 ? { error: 'Слишком длинно, уложитесь в 500 символов.' } : { set: { comment: text } };
     },
   },
   confirm: {
     ask: (d) => ({
-      text: [
-        '<b>Проверьте заявку</b>',
-        '',
-        ...fields(d),
-        `Файл: ${d.file_kind === 'photo' ? 'фото (сжатое)' : 'приложен'}`,
-      ].join('\n'),
+      text: ['<b>Проверьте заявку</b>', '', ...fields(d), 'Скриншот: приложен'].join('\n'),
       buttons: [[btn('📨 Отправить', 'send'), btn('↺ Заново', 'again')]],
     }),
     hint: 'Нажмите «Отправить» или «Заново».',
@@ -308,13 +313,12 @@ export const FLOW = {
 };
 
 // Вопрос анкеты с кнопкой отмены под ним.
-const ask = (name, d, now) => {
-  const r = STEPS[name].ask(d, now);
-  return { ...r, buttons: [...(r.buttons ?? []), [btn('✖ Отмена', 'cancel')]] };
-};
+const withCancel = (r) => ({ ...r, buttons: [...(r.buttons ?? []), [btn('✖ Отмена', 'cancel')]] });
+const ask = (name, d, now) => withCancel(STEPS[name].ask(d, now));
 
 // state: null | { step, draft }. input: { text?, data?, file? }.
 // Возвращает { state, replies, submit? } - submit это готовый черновик.
+// Ответ с edit: true перерисовывает сообщение, кнопку которого нажали.
 export async function step(state, input = {}, now = Date.now(), deps = {}) {
   const text = input.text?.trim();
   const { data, file } = input;
@@ -342,12 +346,13 @@ export async function step(state, input = {}, now = Date.now(), deps = {}) {
   // кнопками и так выше), на чужую кнопку - вопрос заново, кнопки под ним.
   if (!r) return { state, replies: [data ? ask(state.step, state.draft, now) : { text: s.hint }] };
   if (r.error) return { state, replies: [{ text: r.error }] };
+  if (r.show) return { state, replies: [{ ...withCancel(r.show), edit: true }] };
   if (r.end) return { state: null, replies: [r.end] };
   if (r.submit) return { state, replies: [], submit: state.draft };
 
   const draft = { ...state.draft, ...r.set };
   const flow = FLOW[draft.type];
-  const next = r.stay ? state.step : flow[flow.indexOf(state.step) + 1];
+  const next = flow[flow.indexOf(state.step) + 1];
   return {
     state: { step: next, draft },
     replies: [...(r.note ? [{ text: r.note }] : []), ask(next, draft, now)],
@@ -489,6 +494,16 @@ const postCard = async (chat, row) => {
   await thread(chat, ids, row.id);
 };
 
+// Перерисовать сообщение с кнопками тем же { text, buttons }, что шлёт send().
+const editTo = (chat, messageId, { text, buttons }) =>
+  tg('editMessageText', {
+    chat_id: chat,
+    message_id: messageId,
+    text,
+    ...HTML,
+    reply_markup: { inline_keyboard: buttons ?? [] },
+  }).catch(notModified);
+
 const editCard = (message, row, blocked) =>
   tg('editMessageText', {
     chat_id: message.chat.id,
@@ -528,7 +543,7 @@ const submit = async (chat, from, d) => {
   const dayAgo = new Date(Date.now() - 86400e3).toISOString();
   if ((await countSince(from.id, hourAgo)) >= PER_HOUR || (await countSince(from.id, dayAgo)) >= PER_DAY) {
     // Черновик не трогаем: позже игрок нажмёт «Отправить» ещё раз.
-    return send(chat, { text: 'Слишком много заявок. Попробуйте позже.' });
+    return send(chat, { text: 'Слишком много заявок подряд. Попробуйте позже.' });
   }
 
   const [row] = await sbJson('/rest/v1/requests', {
@@ -558,7 +573,7 @@ const submit = async (chat, from, d) => {
     text: `✅ <b>Заявка #${row.id} отправлена</b>
 ${DONE_TEXT[row.type]}
 
-Ответ придёт сюда, в этот чат. Хотите что-то добавить - просто напишите сообщение.`,
+Ответ придёт сюда. Если хотите что-то добавить, просто напишите.`,
   });
 
   // Заявка уже сохранена: сбой у одного админа не мешает остальным.
@@ -577,7 +592,7 @@ const playerMessage = async (msg) => {
   if (!row) {
     const [last] = await sbJson(`/rest/v1/requests?telegram_id=eq.${msg.from.id}&select=id&order=id.desc&limit=1`);
     if (!last) return send(msg.chat.id, welcome());
-    return send(msg.chat.id, { text: `Заявка #${last.id} закрыта. ${CLOSED}`, buttons: [[btn(NEW_BUTTON, 'again')]] });
+    return send(msg.chat.id, { text: `Заявка #${last.id} закрыта. ${CLOSED}` });
   }
 
   const header = `💬 <b>#${row.id} · ${esc(nameOf(msg.from))}</b>`;
@@ -592,7 +607,7 @@ const playerMessage = async (msg) => {
     }
   }
   if (delivered) await react(msg.chat.id, msg.message_id);
-  else await send(msg.chat.id, { text: 'Не удалось передать сообщение. Попробуйте ещё раз чуть позже.' });
+  else await send(msg.chat.id, { text: 'Не получилось отправить. Попробуйте чуть позже.' });
 };
 
 const myRequests = async (chat, from) => {
@@ -661,6 +676,7 @@ const panel = async (filter, offset) => {
     buttons: [
       [mark('new'), mark('in_progress')],
       [mark('done'), mark('rejected'), mark('all')],
+      [btn('🚫 Заблокированные', 'bk')],
       ...rows.slice(0, PAGE).map((r) => [btn(
         `${STATUS[r.status]?.split(' ')[0] ?? ''} #${r.id} ${r.type === 'privilege' ? 'привилегия' : 'донат'} · ${r.steam_id} · `
           + shortDate(r.created_at),
@@ -713,6 +729,31 @@ const toggleBlock = async (message, id) => {
   return blocked ? '✅ Игрок разблокирован' : '🚫 Игрок заблокирован';
 };
 
+// Список заблокированных с кнопкой разблокировки у каждого. Имя - из
+// последней заявки игрока.
+// ponytail: первые 50 без листания; листание, если заблокированных станет больше.
+const blockedList = async () => {
+  const rows = await sbJson('/rest/v1/tg_blocked?select=telegram_id,blocked_at&order=blocked_at.desc&limit=50');
+  const names = new Map();
+  if (rows.length) {
+    const reqs = await sbJson(
+      `/rest/v1/requests?telegram_id=in.(${rows.map((r) => r.telegram_id).join(',')})&select=telegram_id,telegram_name&order=id.asc`,
+    );
+    for (const r of reqs) names.set(String(r.telegram_id), r.telegram_name); // по возрастанию id: последняя заявка перезапишет
+  }
+  const name = (id) => names.get(String(id)) || `id ${id}`;
+  return {
+    text: rows.length
+      ? ['<b>🚫 Заблокированные</b>', '', ...rows.map((r) =>
+          `• ${esc(name(r.telegram_id))} · id <code>${r.telegram_id}</code> · с ${shortDate(r.blocked_at)}`)].join('\n')
+      : '<b>🚫 Заблокированные</b>\n\nНикого нет.',
+    buttons: [
+      ...rows.map((r) => [btn(`✅ Разблокировать ${name(r.telegram_id)}`, `ub:${r.telegram_id}`)]),
+      [btn('← К заявкам', 'ls:new:0')],
+    ],
+  };
+};
+
 // «💬 Ответить»: следующее сообщение админа уйдёт игроку - одно.
 const startReply = async (chat, id) => {
   const row = await getRow(id);
@@ -751,11 +792,20 @@ const keyboard = (admin) => ({
 
 // ── Вход ─────────────────────────────────────────────────────────────
 
-const runStep = async (chat, from, state, input) => {
+// pressed - сообщение, кнопку которого нажали (для нажатий, не для текста).
+const runStep = async (chat, from, state, input, pressed) => {
   const r = await step(state, input, Date.now(), { steamExists });
+  // Кнопки анкеты одноразовые: убираем их, чтобы старую не нажали позже.
+  // Кроме листания условий - там перерисовывается то же сообщение.
+  if (pressed && !r.replies[0]?.edit) {
+    await tg('editMessageReplyMarkup', { chat_id: chat, message_id: pressed.message_id }).catch(() => {});
+  }
   if (r.submit) return submit(chat, from, r.submit);
   if (state || r.state) await saveState(chat, r.state);
-  for (const reply of r.replies) await send(chat, reply);
+  for (const reply of r.replies) {
+    if (reply.edit && pressed) await editTo(chat, pressed.message_id, reply);
+    else await send(chat, reply);
+  }
 };
 
 const fileOf = (msg) =>
@@ -801,7 +851,7 @@ const onMessage = async (msg) => {
     await send(chat, {
       text: admin
         ? 'Вы админ: заявки приходят сюда сами.\n«📋 Все заявки» - панель. На карточке заявки - «💬 Ответить» и «🚫 Заблокировать».'
-        : 'Здравствуйте! Это поддержка игроков GambitRP.\nКнопки внизу - подать заявку и посмотреть свои.',
+        : 'Здравствуйте! Это поддержка GambitRP.\nКнопки внизу: подать заявку и посмотреть свои.',
     }, { reply_markup: keyboard(admin) });
   }
 
@@ -829,12 +879,13 @@ const onCallback = async (cq) => {
     if (admin && kind === 'st') {
       answer = await setStatus(cq.message, Number(a), b);
     } else if (admin && kind === 'ls') {
-      await tg('editMessageText', {
-        chat_id: chat,
-        message_id: cq.message.message_id,
-        ...HTML,
-        ...(({ text, buttons }) => ({ text, reply_markup: { inline_keyboard: buttons } }))(await panel(a, Number(b) || 0)),
-      }).catch(notModified);
+      await editTo(chat, cq.message.message_id, await panel(a, Number(b) || 0));
+    } else if (admin && kind === 'bk') {
+      await editTo(chat, cq.message.message_id, await blockedList());
+    } else if (admin && kind === 'ub' && /^\d+$/.test(a)) {
+      await sbJson(`/rest/v1/tg_blocked?telegram_id=eq.${a}`, { method: 'DELETE' });
+      await editTo(chat, cq.message.message_id, await blockedList());
+      answer = '✅ Разблокирован';
     } else if (admin && kind === 'rq') {
       const row = await getRow(Number(a));
       if (row) await postCard(chat, row);
@@ -847,9 +898,7 @@ const onCallback = async (cq) => {
       await saveState(chat, null);
       await tg('editMessageText', { chat_id: chat, message_id: cq.message.message_id, text: 'Ответ отменён.' }).catch(notModified);
     } else {
-      // Кнопки анкеты одноразовые: убираем их, чтобы старую не нажали позже.
-      await tg('editMessageReplyMarkup', { chat_id: chat, message_id: cq.message.message_id }).catch(() => {});
-      await runStep(chat, cq.from, await loadState(chat), { data });
+      await runStep(chat, cq.from, await loadState(chat), { data }, cq.message);
     }
   } finally {
     // Без ответа у кнопки крутится часик.
