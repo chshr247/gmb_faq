@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GambitRP - Помощь игрокам</title>
-<meta name="description" content="Заявки на возврат привилегии и по непришедшему донату GambitRP.">
+<meta name="description" content="Заявки на возврат привилегии и по непришедшему донату GambitRP принимает Telegram-бот.">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="avatar.png" type="image/png" sizes="180x180">
 <link rel="apple-touch-icon" href="avatar.png">
@@ -12,15 +12,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Шрифты грузим в обход рендера: у части игроков (в основном из России)
      fonts.googleapis.com не отвечает, и блокирующий <link> держал белый экран
-     до таймаута. Теперь страница рисуется сразу системным шрифтом из --font. -->
+     до таймаута. Страница рисуется сразу системным шрифтом. -->
 <link rel="stylesheet" media="print" onload="this.media='all'"
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<div class="cursor-ring" aria-hidden="true"></div>
-<div class="cursor-dot" aria-hidden="true"></div>
 
 <header class="topbar">
   <div class="bar-inner">
@@ -31,7 +28,6 @@
         <small>Управляющий GambitRP</small>
       </span>
     </a>
-    <button type="button" id="copy-discord" class="copy">Discord</button>
   </div>
 </header>
 
@@ -40,209 +36,22 @@
   <header class="head">
     <p class="eyebrow">GambitRP / поддержка</p>
     <h1>Помощь игрокам</h1>
-    <p class="sub">Войдите через Discord, выберите проблему и заполните форму. Ответ придёт туда же.</p>
+    <p class="sub">Заявки на возврат привилегии и по непришедшему донату теперь принимает Telegram-бот.</p>
   </header>
 
-  <div class="card intro">
-    <!-- Какой из двух блоков показать, решает app.js по куке discord_name.
-         Вход показан по умолчанию намеренно: если app.js не доехал (у игроков
-         из России связь с хостингом рвётся), игрок видит кнопку входа, а не
-         пустую карточку. Вошедшему блок прячет showLogin. -->
-    <div id="login">
-      <p class="hint">Заявки принимаются только после входа через Discord - ответ придёт в этот аккаунт.</p>
-      <button type="button" id="login-button">Войти через Discord</button>
-      <p class="err" id="login-err"></p>
-    </div>
-
-    <div class="field picker" id="picker" hidden>
-      <p class="hint">Вы вошли как <b id="who"></b> · <a href="/api/discord?logout">Выйти</a></p>
-      <label class="label" for="problem">Ваша проблема</label>
-      <select id="problem">
-        <option value="">- Выберите проблему -</option>
-        <option value="privilege">Нужно вернуть привилегию</option>
-        <option value="donate">Не пришёл донат</option>
-      </select>
-    </div>
+  <div class="card">
+    <a class="button" href="https://t.me/gmbt_support_bot">Открыть бота в Telegram</a>
+    <p class="hint">Не открывается по кнопке - найдите в поиске Telegram <b>@gmbt_support_bot</b>.</p>
   </div>
 
-  <section class="intro-only">
-    <ol class="steps">
-      <li><span class="step-num">01</span>Входите через Discord</li>
-      <li><span class="step-num">02</span>Выбираете проблему и заполняете форму</li>
-      <li><span class="step-num">03</span>Ответ приходит вам в Discord</li>
-    </ol>
-  </section>
-
-  <!-- ── Привилегия ─────────────────────────────────────────────── -->
-  <section id="s-privilege" class="card" hidden>
-    <h2>Возврат привилегии</h2>
-
-    <div class="note note-ok">
-      <h3>Привилегию возвращаем в 3 случаях</h3>
-      <ol>
-        <li><b>После наборки.</b> Вы заняли пост наборного администратора, имея донатную привилегию. После снятия с наборки донатная админка подлежит восстановлению.</li>
-        <li><b>Автоснятие.</b> При спаме ULX-командами система считает, что вы можете сливать админку, и снимает привилегию. Если вы не сливали админку - она будет восстановлена.</li>
-        <li><b>Забыли снять варны с прошлой админки.</b> Варны перенеслись на новую привилегию и система сняла вас по лимиту (5 варнов). Если на текущей привилегии вы столько не получали - админка будет восстановлена.</li>
-      </ol>
-    </div>
-
-    <div class="note note-bad">
-      <h3>Привилегию НЕ возвращаем, если</h3>
-      <ul>
-        <li>это VIP - возвращаем только донатные админки от д-модера и выше;</li>
-        <li>привилегия утеряна более полугода назад (для наборной админки отсчёт идёт с момента снятия с наборки);</li>
-        <li>вас сняли с донатной админки, а вернуть вы пытаетесь более старую привилегию;</li>
-        <li>отсутствует лог покупок.</li>
-      </ul>
-      <p class="fine">Отказ возможен и по причине, не указанной выше. Если привилегия куплена давно, могут понадобиться дополнительные скриншоты с прокруткой вверх.</p>
-    </div>
-
-    <details>
-      <summary>Где взять SteamID?</summary>
-      <p>Находясь на сервере, откройте <b>TAB</b>, найдите там себя и нажмите «Скопировать SteamID».</p>
-    </details>
-
-    <details>
-      <summary>Где взять лог покупок?</summary>
-      <p>Нажмите <b>F4</b> → откройте <b>Донат</b> → справа сверху иконка профиля → <b>Все логи</b>. Сделайте скриншот с покупкой той привилегии, которую нужно вернуть.</p>
-      <p>Подойдёт и скриншот переписки с Артуром, если вы обновлялись или покупали не через F4.</p>
-    </details>
-
-    <label class="gate">
-      <input type="checkbox" id="gate-privilege">
-      <span>Я прочитал условия выше, моя ситуация подходит под один из трёх случаев, и у меня есть <b>полный, необрезанный</b> скриншот лога покупок.</span>
-    </label>
-
-    <form class="form" data-type="privilege" novalidate hidden>
-      <div class="field">
-        <label class="label" for="p-steam">Ваш SteamID</label>
-        <input id="p-steam" name="steam_id" type="text" inputmode="text" placeholder="STEAM_0:0:43836629" autocomplete="off">
-        <small class="err"></small>
-        <small class="warn"></small>
-      </div>
-
-      <div class="field">
-        <label class="label" for="p-server">Сервер</label>
-        <select id="p-server" name="server">
-          <option value="">- Выберите сервер -</option>
-        </select>
-        <small class="err"></small>
-      </div>
-
-      <div class="field">
-        <label class="label" for="p-reason">Причина пропажи привилегии</label>
-        <select id="p-reason" name="reason">
-          <option value="">- Выберите причину -</option>
-        </select>
-        <small class="err"></small>
-      </div>
-
-      <div class="field">
-        <label class="label" for="p-shot">Скриншот лога покупок</label>
-        <p class="hint">Скриншот должен показывать <b>весь экран целиком, от угла до угла</b>. Обрезанные скриншоты и фотографии монитора не принимаются.</p>
-        <input id="p-shot" name="screenshot" type="file" accept="image/jpeg,image/png,image/webp"
-               data-fullscreen required>
-        <small class="err"></small>
-        <small class="warn"></small>
-        <figure class="preview" hidden>
-          <img alt="Прикреплённый скриншот">
-          <figcaption>Видно весь экран, от угла до угла? Обрезанный скриншот вернут на доработку.</figcaption>
-        </figure>
-      </div>
-
-      <div class="field">
-        <label class="label" for="p-comment">Комментарий <span class="opt">- необязательно</span></label>
-        <textarea id="p-comment" name="comment" rows="3" maxlength="500"></textarea>
-      </div>
-
-      <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <p class="err form-err"></p>
-      <button type="submit">Отправить заявку</button>
-    </form>
-  </section>
-
-  <!-- ── Донат ──────────────────────────────────────────────────── -->
-  <section id="s-donate" class="card" hidden>
-    <h2>Не пришёл донат</h2>
-    <p class="sub">Заполните форму - платёж будет проверен вручную.</p>
-
-    <form class="form" data-type="donate" novalidate>
-      <div class="field">
-        <label class="label" for="d-method">Способ оплаты, который вы выбирали на сайте</label>
-        <select id="d-method" name="payment_method">
-          <option value="">- Выберите способ оплаты -</option>
-        </select>
-        <small class="err"></small>
-      </div>
-
-      <div class="note note-bad" id="external-support" hidden>
-        <h3>Эта проблема решается не администрацией сервера</h3>
-        <p>По выбранному способу оплаты вопрос решает поддержка платёжной системы. Обратитесь напрямую:</p>
-        <p><a id="external-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
-      </div>
-
-      <div class="rest">
-        <div class="field">
-          <label class="label" for="d-steam">Ваш SteamID</label>
-          <input id="d-steam" name="steam_id" type="text" placeholder="STEAM_0:0:43836629" autocomplete="off">
-          <small class="err"></small>
-          <small class="warn"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-server">Сервер</label>
-          <select id="d-server" name="server">
-            <option value="">- Выберите сервер -</option>
-          </select>
-          <small class="err"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-amount">Точная сумма кредитов</label>
-          <p class="hint">Именно кредитов, <b>без учёта комиссии</b>.</p>
-          <input id="d-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="300">
-          <small class="err"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-paid">Дата платежа</label>
-          <p class="hint">По московскому времени.</p>
-          <input id="d-paid" name="paid_at" type="date">
-          <small class="err"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-receipt">Скриншот чека или квитанции</label>
-          <p class="hint">Чек из банка или платёжной системы, где видны сумма и время платежа. Картинкой или PDF.</p>
-          <input id="d-receipt" name="screenshot" type="file"
-                 accept="image/jpeg,image/png,image/webp,application/pdf"
-                 data-missing="Прикрепите скриншот чека" required>
-          <small class="err"></small>
-        </div>
-
-        <div class="field">
-          <label class="label" for="d-comment">Комментарий <span class="opt">- необязательно</span></label>
-          <textarea id="d-comment" name="comment" rows="3" maxlength="500"></textarea>
-        </div>
-
-        <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <p class="err form-err"></p>
-        <button type="submit">Отправить заявку</button>
-      </div>
-    </form>
-  </section>
-
-  <!-- ── Готово ─────────────────────────────────────────────────── -->
-  <section id="s-done" class="card done" hidden>
-    <div class="check" aria-hidden="true">✓</div>
-    <h2>Заявка отправлена</h2>
-    <p id="done-text"></p>
-    <button type="button" id="again" class="ghost">Отправить ещё одну заявку</button>
-  </section>
+  <ol class="steps">
+    <li><span class="step-num">01</span>Открываете бота и нажимаете «Старт»</li>
+    <li><span class="step-num">02</span>Выбираете проблему и отвечаете на вопросы</li>
+    <li><span class="step-num">03</span>Ответ приходит в тот же чат</li>
+  </ol>
 
   <footer class="foot">Вопрос вне списка? Напишите в Discord - <b>cheshirecat247</b></footer>
 </main>
 
-<script type="module" src="app.js"></script>
 </body>
 </html>
