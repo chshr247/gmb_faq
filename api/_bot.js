@@ -14,7 +14,20 @@ const env = () => process.env;
 const PER_HOUR = 3;
 const PER_DAY = 10;
 const STATE_TTL = 24 * 3600e3; // брошенная анкета через сутки начинается заново
+// Режим ответа короткий: нажал «Ответить» и забыл - через час случайный текст
+// игроку уже не уйдёт.
+const REPLY_TTL = 15 * 60e3;
 const PAGE = 5;
+
+// Постоянные кнопки внизу чата. Они приходят обычным текстом, поэтому
+// разбираются раньше анкеты - иначе «Мои заявки» стало бы ответом на вопрос.
+const NEW_BUTTON = '📝 Подать заявку';
+const MY_BUTTON = '📄 Мои заявки';
+const PANEL_BUTTON = '📋 Все заявки';
+const BUTTONS = [NEW_BUTTON, MY_BUTTON, PANEL_BUTTON];
+
+const BLOCKED_TEXT = 'Вы заблокированы в поддержке. Обжаловать - в Discord: cheshirecat247';
+const CLOSED = 'Сообщения по этой заявке больше не принимаются. Остался вопрос - подайте новую заявку.';
 
 export const STATUS = {
   new: '🆕 Новая',
@@ -30,8 +43,8 @@ const DONE_TEXT = {
 
 const PLAYER_STATUS = {
   in_progress: (r) => `🔄 Заявка #${r.id} взята на рассмотрение.`,
-  done: (r) => `✅ Заявка #${r.id}: ${r.type === 'privilege' ? 'привилегия выдана' : 'донат выдан'}.`,
-  rejected: (r) => `❌ Заявка #${r.id} отклонена.\nЕсли есть вопросы - напишите их сюда сообщением.`,
+  done: (r) => `✅ Заявка #${r.id}: ${r.type === 'privilege' ? 'привилегия выдана' : 'донат выдан'}.\n${CLOSED}`,
+  rejected: (r) => `❌ Заявка #${r.id} отклонена.\n${CLOSED}`,
 };
 
 // ── Тексты анкеты (дословно с сайта) ─────────────────────────────────
@@ -109,6 +122,9 @@ const fmtDate = (d) =>
   new Date(String(d).length === 10 ? `${d}T00:00:00+03:00` : d)
     .toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow' });
 
+const shortDate = (t) =>
+  new Date(t).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit' });
+
 // Поля заявки - общие для сводки игроку и карточки админа. d - черновик
 // анкеты или строка из базы: имена полей у них совпадают.
 const fields = (d) => [
@@ -127,7 +143,7 @@ const fields = (d) => [
 
 const TITLE = { privilege: '🟣 <b>ВЕРНУТЬ ПРИВИЛЕГИЮ', donate: '🟡 <b>НЕ ПРИШЁЛ ДОНАТ' };
 
-export const card = (row) => [
+export const card = (row, blocked = false) => [
   `${TITLE[row.type]} · #${row.id}</b>`,
   `Статус: ${STATUS[row.status] ?? esc(row.status)}`,
   ...fields(row),
@@ -136,20 +152,25 @@ export const card = (row) => [
     : `Discord: <code>${esc(row.discord)}</code> · id <code>${esc(row.discord_id)}</code> (с сайта)`,
   ...(row.tg_file_kind === 'photo' ? ['⚠ Telegram сжал фото - мелкий текст может не читаться'] : []),
   ...(row.screenshot_url ? [`<a href="${esc(row.screenshot_url)}">Скриншот</a>`] : []),
-  ...(row.telegram_id ? ['', '<i>Ответьте на это сообщение - ответ уйдёт игроку.</i>'] : []),
+  ...(blocked ? ['🚫 Игрок заблокирован'] : []),
+  ...(row.telegram_id ? ['', '<i>«💬 Ответить» или Reply на это сообщение - ответ уйдёт игроку.</i>'] : []),
 ].join('\n');
 
-const statusKb = (row) => [
+const cardKb = (row, blocked) => [
   ['in_progress', 'done', 'rejected'].map((s) =>
     btn((row.status === s ? '• ' : '') + STATUS[s], `st:${row.id}:${s}`)),
+  ...(row.telegram_id
+    ? [[
+        btn('💬 Ответить', `rp:${row.id}`),
+        btn(blocked ? '✅ Разблокировать' : '🚫 Заблокировать', `bl:${row.id}`),
+      ]]
+    : []),
 ];
 
 const welcome = () => ({
-  text: `Здравствуйте! Это поддержка игроков GambitRP.
+  text: `Выберите вашу проблему:
 
-Выберите вашу проблему:
-
-<i>/cancel - выйти из анкеты. Вопрос вне списка? Напишите в Discord - cheshirecat247</i>`,
+<i>Вопрос вне списка? Напишите в Discord - cheshirecat247</i>`,
   buttons: [[btn('Нужно вернуть привилегию', 't:privilege')], [btn('Не пришёл донат', 't:donate')]],
 });
 
@@ -286,6 +307,12 @@ export const FLOW = {
   donate: ['method', 'steam', 'server', 'amount', 'paid', 'file', 'comment', 'confirm'],
 };
 
+// Вопрос анкеты с кнопкой отмены под ним.
+const ask = (name, d, now) => {
+  const r = STEPS[name].ask(d, now);
+  return { ...r, buttons: [...(r.buttons ?? []), [btn('✖ Отмена', 'cancel')]] };
+};
+
 // state: null | { step, draft }. input: { text?, data?, file? }.
 // Возвращает { state, replies, submit? } - submit это готовый черновик.
 export async function step(state, input = {}, now = Date.now(), deps = {}) {
@@ -294,13 +321,15 @@ export async function step(state, input = {}, now = Date.now(), deps = {}) {
   const command = text?.startsWith('/') ? text.split(/[\s@]/)[0] : null;
 
   if (command === '/start' || data === 'again') return { state: null, replies: [welcome()] };
-  if (command === '/cancel') return { state: null, replies: [{ text: 'Анкета отменена. /start - начать заново.' }] };
+  if (command === '/cancel' || data === 'cancel') {
+    return { state: null, replies: [{ text: 'Анкета отменена.', buttons: [[btn(NEW_BUTTON, 'again')]] }] };
+  }
 
   const type = data?.startsWith('t:') ? data.slice(2) : null;
   if (FLOW[type]) {
     const first = FLOW[type][0];
     const draft = { type };
-    return { state: { step: first, draft }, replies: [STEPS[first].ask(draft, now)] };
+    return { state: { step: first, draft }, replies: [ask(first, draft, now)] };
   }
 
   // Старая кнопка после истёкшей анкеты.
@@ -311,7 +340,7 @@ export async function step(state, input = {}, now = Date.now(), deps = {}) {
 
   // Ввод не того вида: на текст и файлы - короткая подсказка (вопрос с
   // кнопками и так выше), на чужую кнопку - вопрос заново, кнопки под ним.
-  if (!r) return { state, replies: [data ? s.ask(state.draft, now) : { text: s.hint }] };
+  if (!r) return { state, replies: [data ? ask(state.step, state.draft, now) : { text: s.hint }] };
   if (r.error) return { state, replies: [{ text: r.error }] };
   if (r.end) return { state: null, replies: [r.end] };
   if (r.submit) return { state, replies: [], submit: state.draft };
@@ -321,7 +350,7 @@ export async function step(state, input = {}, now = Date.now(), deps = {}) {
   const next = r.stay ? state.step : flow[flow.indexOf(state.step) + 1];
   return {
     state: { step: next, draft },
-    replies: [...(r.note ? [{ text: r.note }] : []), STEPS[next].ask(draft, now)],
+    replies: [...(r.note ? [{ text: r.note }] : []), ask(next, draft, now)],
   };
 }
 
@@ -400,7 +429,8 @@ const steamExists = async (id) => {
 
 const loadState = async (chat) => {
   const [row] = await sbJson(`/rest/v1/tg_state?chat_id=eq.${chat}&select=step,draft,updated_at`);
-  return row && Date.now() - Date.parse(row.updated_at) < STATE_TTL ? { step: row.step, draft: row.draft } : null;
+  const ttl = row?.step === 'reply' ? REPLY_TTL : STATE_TTL;
+  return row && Date.now() - Date.parse(row.updated_at) < ttl ? { step: row.step, draft: row.draft } : null;
 };
 
 const saveState = (chat, state) =>
@@ -413,6 +443,9 @@ const saveState = (chat, state) =>
     : sbJson(`/rest/v1/tg_state?chat_id=eq.${chat}`, { method: 'DELETE' });
 
 const getRow = async (id) => (await sbJson(`/rest/v1/requests?id=eq.${id}&select=*`))[0];
+
+const isBlocked = async (telegramId) =>
+  (await sbJson(`/rest/v1/tg_blocked?telegram_id=eq.${telegramId}&select=telegram_id`)).length > 0;
 
 const countSince = async (telegramId, since) => {
   const response = await sb(
@@ -441,7 +474,8 @@ const cardMessage = async (chat, requestId) =>
 // Карточка - текстом (лимит 4096, а у подписи к файлу всего 1024), файл -
 // ответом на неё. Оба сообщения в tg_thread: ответить игроку можно на любое.
 const postCard = async (chat, row) => {
-  const msg = await send(chat, { text: card(row), buttons: statusKb(row) });
+  const blocked = row.telegram_id ? await isBlocked(row.telegram_id) : false;
+  const msg = await send(chat, { text: card(row, blocked), buttons: cardKb(row, blocked) });
   const ids = [msg.message_id];
   if (row.tg_file_id) {
     const kind = row.tg_file_kind === 'photo' ? 'photo' : 'document';
@@ -454,6 +488,15 @@ const postCard = async (chat, row) => {
   }
   await thread(chat, ids, row.id);
 };
+
+const editCard = (message, row, blocked) =>
+  tg('editMessageText', {
+    chat_id: message.chat.id,
+    message_id: message.message_id,
+    text: card(row, blocked),
+    ...HTML,
+    reply_markup: { inline_keyboard: cardKb(row, blocked) },
+  }).catch(notModified);
 
 // Копия сообщения с заголовком «от кого». Текст пересобираем, чтобы вписать
 // заголовок; всё остальное (фото, файлы, голосовые) копирует сам Telegram.
@@ -524,14 +567,20 @@ ${DONE_TEXT[row.type]}
   }
 };
 
-// Сообщение вне анкеты - переписка по последней заявке игрока.
-// ponytail: всегда последняя заявка; выбор заявки, если понадобится вести две сразу.
+// Сообщение вне анкеты - переписка по последней открытой заявке игрока.
+// По закрытой (Выдано/Отказано) сообщения не принимаются.
+// ponytail: всегда последняя открытая; выбор заявки, если понадобится вести две сразу.
 const playerMessage = async (msg) => {
-  const [row] = await sbJson(`/rest/v1/requests?telegram_id=eq.${msg.from.id}&select=id,status&order=id.desc&limit=1`);
-  if (!row) return send(msg.chat.id, welcome());
+  const [row] = await sbJson(
+    `/rest/v1/requests?telegram_id=eq.${msg.from.id}&status=in.(new,in_progress)&select=id&order=id.desc&limit=1`,
+  );
+  if (!row) {
+    const [last] = await sbJson(`/rest/v1/requests?telegram_id=eq.${msg.from.id}&select=id&order=id.desc&limit=1`);
+    if (!last) return send(msg.chat.id, welcome());
+    return send(msg.chat.id, { text: `Заявка #${last.id} закрыта. ${CLOSED}`, buttons: [[btn(NEW_BUTTON, 'again')]] });
+  }
 
-  const closed = row.status === 'done' || row.status === 'rejected';
-  const header = `💬 <b>#${row.id} · ${esc(nameOf(msg.from))}</b>${closed ? ' · заявка закрыта' : ''}`;
+  const header = `💬 <b>#${row.id} · ${esc(nameOf(msg.from))}</b>`;
   let delivered = false;
   for (const admin of admins()) {
     try {
@@ -546,20 +595,32 @@ const playerMessage = async (msg) => {
   else await send(msg.chat.id, { text: 'Не удалось передать сообщение. Попробуйте ещё раз чуть позже.' });
 };
 
+const myRequests = async (chat, from) => {
+  const rows = await sbJson(
+    `/rest/v1/requests?telegram_id=eq.${from.id}&select=id,type,status,created_at&order=id.desc&limit=10`,
+  );
+  return send(chat, {
+    text: rows.length
+      ? ['<b>Ваши заявки</b>', '', ...rows.map((r) =>
+          `#${r.id} · ${r.type === 'privilege' ? 'привилегия' : 'донат'} · ${STATUS[r.status] ?? esc(r.status)} · ${shortDate(r.created_at)}`,
+        )].join('\n')
+      : 'У вас пока нет заявок.',
+    buttons: [[btn(NEW_BUTTON, 'again')]],
+  });
+};
+
 // ── Админ ────────────────────────────────────────────────────────────
 
-const PANEL_BUTTON = '📋 Все заявки';
 const FILTERS = { new: '🆕 Новые', in_progress: '🔄 В работе', done: '✅ Выданы', rejected: '❌ Отказаны', all: 'Все' };
 
-const adminReply = async (msg) => {
+// Сообщение админа - игроку заявки. true - доставлено. Блокировка игрока
+// ответам не мешает: она закрывает только его сторону.
+const replyToPlayer = async (msg, requestId) => {
   const chat = msg.chat.id;
-  const requestId = await threadRequest(chat, msg.reply_to_message.message_id);
-  if (!requestId) {
-    return send(chat, { text: 'Это сообщение не относится к заявке. Ответьте на карточку заявки или на сообщение игрока.' });
-  }
   const row = await getRow(requestId);
   if (!row?.telegram_id) {
-    return send(chat, { text: `Заявка #${requestId} с сайта - игрока нет в боте. Discord: <code>${esc(row?.discord)}</code>` });
+    await send(chat, { text: `Заявка #${requestId} с сайта - игрока нет в боте. Discord: <code>${esc(row?.discord)}</code>` });
+    return false;
   }
   try {
     await relay(msg, row.telegram_id, `💬 <b>Поддержка · заявка #${row.id}</b>`);
@@ -567,10 +628,21 @@ const adminReply = async (msg) => {
     const why = /blocked|deactivated|chat not found/.test(error.message)
       ? 'игрок заблокировал бота или удалил аккаунт'
       : esc(error.message);
-    return send(chat, { text: `Не доставлено: ${why}` }, { reply_parameters: { message_id: msg.message_id } });
+    await send(chat, { text: `Не доставлено: ${why}` }, { reply_parameters: { message_id: msg.message_id } });
+    return false;
   }
   await thread(chat, [msg.message_id], row.id);
   await react(chat, msg.message_id);
+  return true;
+};
+
+// Reply на карточку, файл или сообщение игрока.
+const adminReply = async (msg) => {
+  const requestId = await threadRequest(msg.chat.id, msg.reply_to_message.message_id);
+  if (!requestId) {
+    return send(msg.chat.id, { text: 'Это сообщение не относится к заявке. Нажмите «💬 Ответить» на карточке или ответьте (Reply) на сообщение игрока.' });
+  }
+  return replyToPlayer(msg, requestId);
 };
 
 const panel = async (filter, offset) => {
@@ -591,7 +663,7 @@ const panel = async (filter, offset) => {
       [mark('done'), mark('rejected'), mark('all')],
       ...rows.slice(0, PAGE).map((r) => [btn(
         `${STATUS[r.status]?.split(' ')[0] ?? ''} #${r.id} ${r.type === 'privilege' ? 'привилегия' : 'донат'} · ${r.steam_id} · `
-          + new Date(r.created_at).toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', day: '2-digit', month: '2-digit' }),
+          + shortDate(r.created_at),
         `rq:${r.id}`,
       )]),
       ...(nav.length ? [nav] : []),
@@ -612,13 +684,7 @@ const setStatus = async (message, id, status) => {
   });
   // ponytail: перерисовываем только нажатую карточку; у второго админа статус
   // на его копии останется прежним, пока он сам не откроет заявку из панели.
-  await tg('editMessageText', {
-    chat_id: message.chat.id,
-    message_id: message.message_id,
-    text: card(updated),
-    ...HTML,
-    reply_markup: { inline_keyboard: statusKb(updated) },
-  }).catch(notModified);
+  await editCard(message, updated, updated.telegram_id ? await isBlocked(updated.telegram_id) : false);
 
   if (!updated.telegram_id) return `${STATUS[status]} · игрок с сайта, уведомления нет`;
   try {
@@ -629,6 +695,59 @@ const setStatus = async (message, id, status) => {
     return `${STATUS[status]} · игрок не получил уведомление (заблокировал бота?)`;
   }
 };
+
+const toggleBlock = async (message, id) => {
+  const row = await getRow(id);
+  if (!row?.telegram_id) return 'Игрока этой заявки нет в боте';
+  if (isAdmin(row.telegram_id)) return 'Админа заблокировать нельзя';
+  const blocked = await isBlocked(row.telegram_id);
+  await (blocked
+    ? sbJson(`/rest/v1/tg_blocked?telegram_id=eq.${row.telegram_id}`, { method: 'DELETE' })
+    : sbJson('/rest/v1/tg_blocked', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=ignore-duplicates' },
+        body: JSON.stringify({ telegram_id: row.telegram_id }),
+      }));
+  // ponytail: как и со статусом - перерисовываем только нажатую карточку.
+  await editCard(message, row, !blocked);
+  return blocked ? '✅ Игрок разблокирован' : '🚫 Игрок заблокирован';
+};
+
+// «💬 Ответить»: следующее сообщение админа уйдёт игроку - одно.
+const startReply = async (chat, id) => {
+  const row = await getRow(id);
+  if (!row?.telegram_id) return 'Игрока этой заявки нет в боте';
+  await saveState(chat, { step: 'reply', draft: { request_id: row.id } });
+  await send(chat, {
+    text: `✍ Напишите сообщение игроку по заявке #${row.id} - текст, фото или файл. Уйдёт одним сообщением.`,
+    buttons: [[btn('✖ Отмена', 'rpx')]],
+  });
+  return undefined;
+};
+
+const COMMANDS = [
+  { command: 'start', description: 'Подать заявку' },
+  { command: 'my', description: 'Мои заявки' },
+  { command: 'cancel', description: 'Отменить анкету' },
+];
+
+// Меню команд. У админов своё, с панелью: игроки его не видят.
+const setCommands = () =>
+  Promise.all([
+    tg('setMyCommands', { commands: COMMANDS }),
+    ...admins().map((id) => tg('setMyCommands', {
+      commands: [...COMMANDS, { command: 'panel', description: 'Панель заявок' }],
+      scope: { type: 'chat', chat_id: id },
+    })),
+  ]).catch((error) => console.error('commands', error));
+
+const keyboard = (admin) => ({
+  keyboard: admin
+    ? [[{ text: PANEL_BUTTON }], [{ text: NEW_BUTTON }, { text: MY_BUTTON }]]
+    : [[{ text: NEW_BUTTON }, { text: MY_BUTTON }]],
+  resize_keyboard: true,
+  is_persistent: true,
+});
 
 // ── Вход ─────────────────────────────────────────────────────────────
 
@@ -649,26 +768,53 @@ const fileOf = (msg) =>
 const onMessage = async (msg) => {
   const chat = msg.chat.id;
   const admin = isAdmin(chat);
+  const text = msg.text;
+  const command = text?.startsWith('/') ? text.split(/[\s@]/)[0] : null;
 
-  if (admin && msg.reply_to_message) return adminReply(msg);
-  if (admin && (msg.text === '/panel' || msg.text === PANEL_BUTTON)) return send(chat, await panel('new', 0));
+  let state = await loadState(chat);
 
-  const state = await loadState(chat);
-  const isCommand = msg.text?.startsWith('/');
+  // Reply тоже снимает режим ответа - иначе следующее обычное сообщение
+  // ушло бы игроку вдогонку.
+  if (admin && msg.reply_to_message) {
+    if (state?.step === 'reply') await saveState(chat, null);
+    return adminReply(msg);
+  }
 
-  if (!state && !isCommand) {
+  // Режим ответа: одно сообщение уходит игроку. Команда или кнопка снимает
+  // режим и выполняется как обычно - кнопка панели не должна улететь игроку.
+  if (admin && state?.step === 'reply') {
+    await saveState(chat, null);
+    if (!command && !BUTTONS.includes(text)) {
+      const id = state.draft.request_id;
+      if (await replyToPlayer(msg, id)) await send(chat, { text: `Отправлено игроку по заявке #${id}.` });
+      return;
+    }
+    state = null;
+  }
+
+  if (admin && (command === '/panel' || text === PANEL_BUTTON)) return send(chat, await panel('new', 0));
+  // «Мои заявки» анкету не сбрасывает: посмотрел и продолжил.
+  if (command === '/my' || text === MY_BUTTON) return myRequests(chat, msg.from);
+
+  if (command === '/start') {
+    if (admin) await setCommands();
+    await send(chat, {
+      text: admin
+        ? 'Вы админ: заявки приходят сюда сами.\n«📋 Все заявки» - панель. На карточке заявки - «💬 Ответить» и «🚫 Заблокировать».'
+        : 'Здравствуйте! Это поддержка игроков GambitRP.\nКнопки внизу - подать заявку и посмотреть свои.',
+    }, { reply_markup: keyboard(admin) });
+  }
+
+  if (!state && !command && text !== NEW_BUTTON) {
     if (!admin) return playerMessage(msg);
-    return send(chat, { text: 'Чтобы написать игроку, ответьте (Reply) на карточку его заявки или на его сообщение.' });
+    return send(chat, { text: 'Чтобы написать игроку, нажмите «💬 Ответить» на карточке заявки или ответьте (Reply) на его сообщение.' });
   }
 
-  await runStep(chat, msg.from, state, { text: msg.text ?? msg.caption, file: fileOf(msg) });
-
-  // Админу на /start - ещё и постоянная кнопка панели.
-  if (admin && msg.text?.startsWith('/start')) {
-    await send(chat, { text: 'Вы админ: заявки приходят сюда сами. Ответ на карточку уходит игроку.' }, {
-      reply_markup: { keyboard: [[{ text: PANEL_BUTTON }]], resize_keyboard: true, is_persistent: true },
-    });
-  }
+  // «Подать заявку» - то же, что /start, только без приветствия.
+  await runStep(chat, msg.from, state, {
+    text: text === NEW_BUTTON ? '/start' : (text ?? msg.caption),
+    file: fileOf(msg),
+  });
 };
 
 const onCallback = async (cq) => {
@@ -693,6 +839,13 @@ const onCallback = async (cq) => {
       const row = await getRow(Number(a));
       if (row) await postCard(chat, row);
       else answer = 'Заявка не найдена';
+    } else if (admin && kind === 'bl') {
+      answer = await toggleBlock(cq.message, Number(a));
+    } else if (admin && kind === 'rp') {
+      answer = await startReply(chat, Number(a));
+    } else if (admin && kind === 'rpx') {
+      await saveState(chat, null);
+      await tg('editMessageText', { chat_id: chat, message_id: cq.message.message_id, text: 'Ответ отменён.' }).catch(notModified);
     } else {
       // Кнопки анкеты одноразовые: убираем их, чтобы старую не нажали позже.
       await tg('editMessageReplyMarkup', { chat_id: chat, message_id: cq.message.message_id }).catch(() => {});
@@ -705,7 +858,18 @@ const onCallback = async (cq) => {
 };
 
 export async function handle(update) {
-  if (update.callback_query) return onCallback(update.callback_query);
-  const msg = update.message;
-  if (msg?.chat?.type === 'private' && msg.from) return onMessage(msg);
+  const cq = update.callback_query;
+  const msg = update.message?.chat?.type === 'private' ? update.message : null;
+  const from = cq?.from ?? msg?.from;
+  if (!from || (!cq && !msg)) return;
+
+  // Заблокированному - ни анкеты, ни переписки. Админа не блокируем никогда.
+  if (!isAdmin(from.id) && (await isBlocked(from.id))) {
+    if (cq) {
+      return tg('answerCallbackQuery', { callback_query_id: cq.id, text: BLOCKED_TEXT, show_alert: true }).catch(() => {});
+    }
+    return send(msg.chat.id, { text: BLOCKED_TEXT });
+  }
+
+  return cq ? onCallback(cq) : onMessage(msg);
 }

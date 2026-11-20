@@ -102,6 +102,18 @@ test('сжатое фото: пометка, и файл на шаге комм�
   assert.equal(r.state.draft.file_kind, 'document');
 });
 
+test('под каждым вопросом анкеты - кнопка «Отмена», и она работает', async () => {
+  let state = null;
+  for (const input of [{ data: 't:donate' }, { data: 'm:3' }, { text: 'STEAM_0:0:43836629' }, { data: 's:0' }]) {
+    const r = await step(state, input, NOW, deps);
+    state = r.state;
+    assert.equal(r.replies.at(-1).buttons.at(-1)[0].callback_data, 'cancel', `шаг ${state.step}`);
+  }
+  const r = await step(state, { data: 'cancel' }, NOW, deps);
+  assert.equal(r.state, null);
+  assert.equal(r.replies[0].buttons[0][0].callback_data, 'again', 'после отмены - «Подать заявку»');
+});
+
 test('/start и /cancel сбрасывают анкету, старая кнопка без анкеты - меню', async () => {
   const at = { step: 'amount', draft: { type: 'donate' } };
   assert.equal((await step(at, { text: '/cancel' }, NOW, deps)).state, null);

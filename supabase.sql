@@ -78,3 +78,10 @@ create index if not exists tg_thread_request_idx on public.tg_thread (request_id
 
 alter table public.tg_state  enable row level security;
 alter table public.tg_thread enable row level security;
+
+-- Заблокированные игроки: ни заявок, ни сообщений в поддержку.
+create table if not exists public.tg_blocked (
+  telegram_id bigint primary key,
+  blocked_at  timestamptz not null default now()
+);
+alter table public.tg_blocked enable row level security;
