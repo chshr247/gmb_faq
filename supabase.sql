@@ -43,3 +43,38 @@ on conflict (id) do nothing;
 
 -- Политик на bucket тоже нет - файлы отдаются только по подписанной ссылке,
 -- которую кладём в screenshot_url.
+
+-- ── Бот (api/telegram.js) ───────────────────────────────────────────
+-- Только добавляет: сайт продолжает работать и с этой схемой.
+-- У заявок из бота нет Discord - ник и id берутся из Telegram.
+alter table public.requests alter column discord drop not null;
+alter table public.requests add column if not exists telegram_id   bigint;
+alter table public.requests add column if not exists telegram_name text;  -- @username или имя
+alter table public.requests add column if not exists tg_file_id    text;  -- файл остаётся в Telegram
+alter table public.requests add column if not exists tg_file_kind  text;  -- document | photo
+-- Умолчание 'web': сайт колонку не пишет и не сломается, даже если этот SQL
+-- ещё не выполнен; бот пишет 'tg' сам. Старым заявкам проставится 'web'.
+alter table public.requests add column if not exists source        text not null default 'web';
+create index if not exists requests_tg_idx on public.requests (telegram_id, created_at desc);
+
+-- Черновик анкеты: вебхук не помнит ничего между сообщениями.
+create table if not exists public.tg_state (
+  chat_id    bigint primary key,
+  step       text not null,
+  draft      jsonb not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+-- Какое сообщение в чате админа к какой заявке относится: ответ на любое из
+-- них уходит игроку этой заявки. message_id уникален только внутри чата,
+-- поэтому ключ - пара (чат, сообщение).
+create table if not exists public.tg_thread (
+  admin_chat_id bigint not null,
+  admin_msg_id  bigint not null,
+  request_id    bigint not null references public.requests(id) on delete cascade,
+  primary key (admin_chat_id, admin_msg_id)
+);
+create index if not exists tg_thread_request_idx on public.tg_thread (request_id, admin_chat_id);
+
+alter table public.tg_state  enable row level security;
+alter table public.tg_thread enable row level security;
