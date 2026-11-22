@@ -85,3 +85,35 @@ create table if not exists public.tg_blocked (
   blocked_at  timestamptz not null default now()
 );
 alter table public.tg_blocked enable row level security;
+
+-- ── Админ-панель на сайте (api/admin.js) ────────────────────────────
+-- Переписка. Раньше её нигде не было: бот только пересылал сообщения в чат
+-- админа. Панели нужен чат, поэтому каждое сообщение в обе стороны пишется сюда.
+-- История начинается с момента выполнения этого SQL: что было сказано раньше,
+-- осталось только в чате Telegram.
+create table if not exists public.messages (
+  id           bigserial primary key,
+  request_id   bigint not null references public.requests(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  from_admin   boolean not null,
+  admin_id     bigint,        -- кто из админов ответил; у сообщений игрока null
+  text         text,
+  tg_file_id   text,          -- файл остаётся в Telegram, как и в заявках
+  tg_file_kind text,          -- photo | document | voice | video | audio | animation
+  via          text not null default 'tg'  -- 'tg' - из чата бота, 'web' - из панели
+);
+create index if not exists messages_request_idx on public.messages (request_id, id);
+alter table public.messages enable row level security;
+
+-- Непрочитанное считаем сравнением двух дат, без счётчиков:
+-- last_player_at > last_seen_at - игрок написал после того, как ты открывал заявку.
+alter table public.requests add column if not exists last_player_at timestamptz;
+alter table public.requests add column if not exists last_seen_at   timestamptz;
+
+-- Шаблоны ответов, настраиваются в панели.
+create table if not exists public.reply_templates (
+  id   bigserial primary key,
+  text text not null,
+  sort integer not null default 0
+);
+alter table public.reply_templates enable row level security;

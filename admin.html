@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Панель заявок - GambitRP</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="avatar.png" type="image/png" sizes="180x180">
+<!-- Шрифты в обход рендера, как на главной: страница рисуется сразу. -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Montserrat:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin">
+
+<!-- Экран входа. Кнопку виджета вставляет admin.js, когда она нужна. -->
+<section id="login" class="gate" hidden>
+  <div class="card gate-card">
+    <p class="eyebrow">GambitRP / панель</p>
+    <h1>Заявки</h1>
+    <p class="sub">Вход только для админов: Telegram должен быть в списке <code>ADMIN_IDS</code>.</p>
+    <div id="tg-button" class="tg-button"></div>
+    <p class="hint" id="gate-hint"></p>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="bar-admin">
+      <a class="mark" href="/">
+        <img class="mark-badge" src="avatar.png" width="40" height="40" alt="" decoding="async">
+        <span class="mark-text"><b>Панель заявок</b><small id="whoami">GambitRP</small></span>
+      </a>
+      <div class="bar-tools">
+        <button type="button" class="chip" id="open-templates">⚙ Шаблоны</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="panel">
+    <aside class="side">
+      <div class="side-top">
+        <input type="search" id="search" class="field" placeholder="SteamID, #номер, ник" autocomplete="off">
+        <div class="chips" id="filters"></div>
+        <div class="chips" id="sorts"></div>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="side-foot">
+        <button type="button" class="chip" id="more" hidden>Показать ещё</button>
+      </div>
+    </aside>
+
+    <section class="view" id="view">
+      <div class="head" id="head"><p class="empty">Выберите заявку слева.</p></div>
+      <div class="chat" id="chat"></div>
+      <form class="composer" id="composer" hidden>
+        <div class="chips" id="template-chips"></div>
+        <div class="composer-row">
+          <textarea id="answer" class="field" rows="2" placeholder="Ответ игроку. Enter - отправить, Shift+Enter - перенос строки"></textarea>
+          <button type="submit" class="button send">Отправить</button>
+        </div>
+        <p class="hint composer-hint" id="send-hint"></p>
+      </form>
+    </section>
+  </main>
+</div>
+
+<dialog id="templates" class="modal">
+  <form method="dialog" class="modal-head">
+    <b>Шаблоны ответов</b>
+    <button class="chip" value="close">✖</button>
+  </form>
+  <div id="template-list" class="template-list"></div>
+  <form class="template-add" id="template-add">
+    <textarea id="template-text" class="field" rows="3" placeholder="Текст нового шаблона"></textarea>
+    <button type="submit" class="button">Добавить</button>
+  </form>
+</dialog>
+
+<script src="admin.js" type="module"></script>
+</body>
+</html>

@@ -170,7 +170,7 @@ export const card = (row, blocked = false) => [
   ...(row.telegram_id ? ['', '<i>«💬 Ответить» или Reply на это сообщение - ответ уйдёт игроку.</i>'] : []),
 ].join('\n');
 
-const cardKb = (row, blocked) => [
+export const cardKb = (row, blocked) => [
   ['in_progress', 'done', 'rejected'].map((s) =>
     btn((row.status === s ? '• ' : '') + STATUS[s], `st:${row.id}:${s}`)),
   ...(row.telegram_id
@@ -361,7 +361,7 @@ export async function step(state, input = {}, now = Date.now(), deps = {}) {
 
 // ── Telegram и Supabase ──────────────────────────────────────────────
 
-const tg = async (method, body) => {
+export const tg = async (method, body) => {
   const response = await fetch(`https://api.telegram.org/bot${env().TELEGRAM_BOT_TOKEN}/${method}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -379,7 +379,7 @@ const notModified = (error) => {
 
 const HTML = { parse_mode: 'HTML', link_preview_options: { is_disabled: true } };
 
-const send = (chat_id, { text, buttons }, extra = {}) =>
+export const send = (chat_id, { text, buttons }, extra = {}) =>
   tg('sendMessage', {
     chat_id,
     text,
@@ -403,16 +403,16 @@ const sb = (path, init = {}) =>
     },
   });
 
-const sbJson = async (path, init) => {
+export const sbJson = async (path, init) => {
   const response = await sb(path, init);
   if (!response.ok) throw new Error(`supabase ${init?.method ?? 'GET'} ${path}: ${response.status} ${await response.text()}`);
   const body = await response.text();
   return body ? JSON.parse(body) : null;
 };
 
-const admins = () =>
+export const admins = () =>
   String(env().ADMIN_IDS || env().TELEGRAM_CHAT_ID || '').split(',').map((s) => s.trim()).filter(Boolean);
-const isAdmin = (chat) => admins().includes(String(chat));
+export const isAdmin = (chat) => admins().includes(String(chat));
 
 // Самый дешёвый фильтр выдуманных заявок: у выдуманного SteamID нет профиля в
 // Steam. Ключа нет или Steam не ответил - считаем, что не знаем, и пропускаем:
@@ -447,9 +447,9 @@ const saveState = (chat, state) =>
       })
     : sbJson(`/rest/v1/tg_state?chat_id=eq.${chat}`, { method: 'DELETE' });
 
-const getRow = async (id) => (await sbJson(`/rest/v1/requests?id=eq.${id}&select=*`))[0];
+export const getRow = async (id) => (await sbJson(`/rest/v1/requests?id=eq.${id}&select=*`))[0];
 
-const isBlocked = async (telegramId) =>
+export const isBlocked = async (telegramId) =>
   (await sbJson(`/rest/v1/tg_blocked?telegram_id=eq.${telegramId}&select=telegram_id`)).length > 0;
 
 const countSince = async (telegramId, since) => {
@@ -467,11 +467,36 @@ const thread = (chat, messageIds, requestId) =>
     body: JSON.stringify(messageIds.map((id) => ({ admin_chat_id: chat, admin_msg_id: id, request_id: requestId }))),
   });
 
+const MEDIA = ['photo', 'document', 'voice', 'video', 'audio', 'animation', 'video_note', 'sticker'];
+
+// Файл любого вида из сообщения: у фото это массив размеров, крупнейший - последний.
+const mediaOf = (msg) => {
+  for (const kind of MEDIA) {
+    const media = msg[kind];
+    if (media) return { tg_file_id: (Array.isArray(media) ? media.at(-1) : media).file_id, tg_file_kind: kind };
+  }
+  return {};
+};
+
+// Переписка в базу: в Telegram её историю не прочитать, а панели на сайте она
+// нужна. Сбой записи не роняет доставку - сообщение уже ушло адресату.
+export const logMessage = (requestId, row) =>
+  sbJson('/rest/v1/messages', { method: 'POST', body: JSON.stringify({ request_id: requestId, ...row }) })
+    .catch((error) => console.error('log message', error));
+
+// Когда игрок написал последний раз. Панель сравнивает с last_seen_at и
+// показывает непрочитанное.
+const touchPlayerAt = (requestId) =>
+  sbJson(`/rest/v1/requests?id=eq.${requestId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ last_player_at: new Date().toISOString() }),
+  }).catch((error) => console.error('last_player_at', error));
+
 const threadRequest = async (chat, messageId) =>
   (await sbJson(`/rest/v1/tg_thread?admin_chat_id=eq.${chat}&admin_msg_id=eq.${messageId}&select=request_id`))[0]?.request_id;
 
 // Первое сообщение заявки в чате админа - это карточка: к ней и цепляем переписку.
-const cardMessage = async (chat, requestId) =>
+export const cardMessage = async (chat, requestId) =>
   (await sbJson(
     `/rest/v1/tg_thread?admin_chat_id=eq.${chat}&request_id=eq.${requestId}&select=admin_msg_id&order=admin_msg_id.asc&limit=1`,
   ))[0]?.admin_msg_id;
@@ -504,14 +529,26 @@ const editTo = (chat, messageId, { text, buttons }) =>
     reply_markup: { inline_keyboard: buttons ?? [] },
   }).catch(notModified);
 
-const editCard = (message, row, blocked) =>
-  tg('editMessageText', {
-    chat_id: message.chat.id,
-    message_id: message.message_id,
-    text: card(row, blocked),
-    ...HTML,
-    reply_markup: { inline_keyboard: cardKb(row, blocked) },
-  }).catch(notModified);
+// Карточки заявки во всех чатах админов - перерисовать после правки.
+// pressed - сообщение, кнопку которого нажали: это может быть копия карточки,
+// открытая из списка, а не первая.
+const refreshCards = async (row, blocked, pressed) => {
+  const targets = [];
+  const seen = new Set();
+  const add = (chat, messageId) => {
+    const key = `${chat}:${messageId}`;
+    if (!messageId || seen.has(key)) return;
+    seen.add(key);
+    targets.push([chat, messageId]);
+  };
+  for (const admin of admins()) add(admin, await cardMessage(admin, row.id));
+  if (pressed) add(pressed.chat.id, pressed.message_id);
+
+  for (const [chat, messageId] of targets) {
+    await editTo(chat, messageId, { text: card(row, blocked), buttons: cardKb(row, blocked) })
+      .catch((error) => console.error('card refresh', chat, error));
+  }
+};
 
 // Копия сообщения с заголовком «от кого». Текст пересобираем, чтобы вписать
 // заголовок; всё остальное (фото, файлы, голосовые) копирует сам Telegram.
@@ -595,6 +632,9 @@ const playerMessage = async (msg) => {
     return send(msg.chat.id, { text: `Заявка #${last.id} закрыта. ${CLOSED}` });
   }
 
+  await logMessage(row.id, { from_admin: false, text: msg.text ?? msg.caption ?? null, ...mediaOf(msg), via: 'tg' });
+  await touchPlayerAt(row.id);
+
   const header = `💬 <b>#${row.id} · ${esc(nameOf(msg.from))}</b>`;
   let delivered = false;
   for (const admin of admins()) {
@@ -628,6 +668,9 @@ const myRequests = async (chat, from) => {
 
 const FILTERS = { new: '🆕 Новые', in_progress: '🔄 В работе', done: '✅ Выданы', rejected: '❌ Отказаны', all: 'Все' };
 
+// Заголовок ответа админа. Один на бота и панель, чтобы игрок видел одно и то же.
+export const supportHeader = (id) => `💬 <b>Поддержка · заявка #${id}</b>`;
+
 // Сообщение админа - игроку заявки. true - доставлено. Блокировка игрока
 // ответам не мешает: она закрывает только его сторону.
 const replyToPlayer = async (msg, requestId) => {
@@ -638,7 +681,7 @@ const replyToPlayer = async (msg, requestId) => {
     return false;
   }
   try {
-    await relay(msg, row.telegram_id, `💬 <b>Поддержка · заявка #${row.id}</b>`);
+    await relay(msg, row.telegram_id, supportHeader(row.id));
   } catch (error) {
     const why = /blocked|deactivated|chat not found/.test(error.message)
       ? 'игрок заблокировал бота или удалил аккаунт'
@@ -646,6 +689,13 @@ const replyToPlayer = async (msg, requestId) => {
     await send(chat, { text: `Не доставлено: ${why}` }, { reply_parameters: { message_id: msg.message_id } });
     return false;
   }
+  await logMessage(row.id, {
+    from_admin: true,
+    admin_id: msg.from.id,
+    text: msg.text ?? msg.caption ?? null,
+    ...mediaOf(msg),
+    via: 'tg',
+  });
   await thread(chat, [msg.message_id], row.id);
   await react(chat, msg.message_id);
   return true;
@@ -659,6 +709,10 @@ const adminReply = async (msg) => {
   }
   return replyToPlayer(msg, requestId);
 };
+
+// Ссылка на панель на сайте. PANEL_URL не задан - кнопки просто нет.
+const panelLink = () =>
+  env().PANEL_URL ? [[{ text: '🖥 Открыть панель на сайте', url: env().PANEL_URL }]] : [];
 
 const panel = async (filter, offset) => {
   const f = FILTERS[filter] ? filter : 'new';
@@ -674,6 +728,7 @@ const panel = async (filter, offset) => {
   return {
     text: `<b>Заявки · ${FILTERS[f]}</b>${offset ? ` · с ${offset + 1}-й` : ''}${rows.length ? '' : '\n\nПусто.'}`,
     buttons: [
+      ...panelLink(),
       [mark('new'), mark('in_progress')],
       [mark('done'), mark('rejected'), mark('all')],
       [btn('🚫 Заблокированные', 'bk')],
@@ -687,35 +742,36 @@ const panel = async (filter, offset) => {
   };
 };
 
-const setStatus = async (message, id, status) => {
-  if (!['in_progress', 'done', 'rejected'].includes(status)) return 'Неизвестный статус';
+// Смена статуса: база, уведомление игроку, перерисовка карточек. Один код на
+// два входа - кнопку в боте и панель на сайте, иначе логика разъедется.
+// Возвращает { error } либо { row, text } - text годится и в ответ на нажатие.
+export const applyStatus = async (id, status, pressed) => {
+  if (!['in_progress', 'done', 'rejected'].includes(status)) return { error: 'Неизвестный статус' };
   const row = await getRow(id);
-  if (!row) return 'Заявка не найдена';
-  if (row.status === status) return 'Статус уже такой';
+  if (!row) return { error: 'Заявка не найдена' };
+  if (row.status === status) return { error: 'Статус уже такой' };
 
   const [updated] = await sbJson(`/rest/v1/requests?id=eq.${id}`, {
     method: 'PATCH',
     headers: { Prefer: 'return=representation' },
     body: JSON.stringify({ status }),
   });
-  // ponytail: перерисовываем только нажатую карточку; у второго админа статус
-  // на его копии останется прежним, пока он сам не откроет заявку из панели.
-  await editCard(message, updated, updated.telegram_id ? await isBlocked(updated.telegram_id) : false);
+  await refreshCards(updated, updated.telegram_id ? await isBlocked(updated.telegram_id) : false, pressed);
 
-  if (!updated.telegram_id) return `${STATUS[status]} · игрок с сайта, уведомления нет`;
+  if (!updated.telegram_id) return { row: updated, text: `${STATUS[status]} · игрок с сайта, уведомления нет` };
   try {
     await send(updated.telegram_id, { text: PLAYER_STATUS[status](updated) });
-    return STATUS[status];
+    return { row: updated, text: STATUS[status] };
   } catch (error) {
     console.error('status notify', error);
-    return `${STATUS[status]} · игрок не получил уведомление (заблокировал бота?)`;
+    return { row: updated, text: `${STATUS[status]} · игрок не получил уведомление (заблокировал бота?)` };
   }
 };
 
-const toggleBlock = async (message, id) => {
+export const applyBlock = async (id, pressed) => {
   const row = await getRow(id);
-  if (!row?.telegram_id) return 'Игрока этой заявки нет в боте';
-  if (isAdmin(row.telegram_id)) return 'Админа заблокировать нельзя';
+  if (!row?.telegram_id) return { error: 'Игрока этой заявки нет в боте' };
+  if (isAdmin(row.telegram_id)) return { error: 'Админа заблокировать нельзя' };
   const blocked = await isBlocked(row.telegram_id);
   await (blocked
     ? sbJson(`/rest/v1/tg_blocked?telegram_id=eq.${row.telegram_id}`, { method: 'DELETE' })
@@ -724,9 +780,8 @@ const toggleBlock = async (message, id) => {
         headers: { Prefer: 'resolution=ignore-duplicates' },
         body: JSON.stringify({ telegram_id: row.telegram_id }),
       }));
-  // ponytail: как и со статусом - перерисовываем только нажатую карточку.
-  await editCard(message, row, !blocked);
-  return blocked ? '✅ Игрок разблокирован' : '🚫 Игрок заблокирован';
+  await refreshCards(row, !blocked, pressed);
+  return { blocked: !blocked, text: blocked ? '✅ Игрок разблокирован' : '🚫 Игрок заблокирован' };
 };
 
 // Список заблокированных с кнопкой разблокировки у каждого. Имя - из
@@ -877,7 +932,8 @@ const onCallback = async (cq) => {
     const admin = isAdmin(chat);
 
     if (admin && kind === 'st') {
-      answer = await setStatus(cq.message, Number(a), b);
+      const r = await applyStatus(Number(a), b, cq.message);
+      answer = r.error ?? r.text;
     } else if (admin && kind === 'ls') {
       await editTo(chat, cq.message.message_id, await panel(a, Number(b) || 0));
     } else if (admin && kind === 'bk') {
@@ -891,7 +947,8 @@ const onCallback = async (cq) => {
       if (row) await postCard(chat, row);
       else answer = 'Заявка не найдена';
     } else if (admin && kind === 'bl') {
-      answer = await toggleBlock(cq.message, Number(a));
+      const r = await applyBlock(Number(a), cq.message);
+      answer = r.error ?? r.text;
     } else if (admin && kind === 'rp') {
       answer = await startReply(chat, Number(a));
     } else if (admin && kind === 'rpx') {
